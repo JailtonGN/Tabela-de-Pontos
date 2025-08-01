@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Sistema de Pontos - Meus Filhos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="modal-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🏆 Sistema de Pontos</h1>
+                    <p>Gerenciando os pontos dos meus filhos</p>
+                </div>
+                <button id="btn-configuracoes" class="btn-config" title="Configurações">
+                    ⚙️
+                </button>
+            </div>
+        </header>
+
+        <!-- Seção Principal -->
+        <div class="main-content">
+            <!-- Dashboard de Pontos -->
+            <div class="dashboard-section">
+                <div class="card pontos-card">
+                    <h2>📊 Pontos Atuais</h2>
+                    <div class="pontos-display">
+                        <!-- Filhos serão renderizados dinamicamente aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Ações -->
+            <div class="acoes-section">
+                <div class="acoes-grid">
+                    <!-- Adicionar Pontos -->
+                    <div class="card acao-card">
+                        <h2>🎯 Adicionar Pontos</h2>
+                        <div class="form-group">
+                            <label for="filho-adicionar">Filho:</label>
+                            <select id="filho-adicionar" class="form-control">
+                                <!-- Opções serão preenchidas dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="atividade-adicionar">🎯 Escolha a atividade:</label>
+                            <select id="atividade-adicionar" class="form-control">
+                                <option value="" disabled selected>👆 Selecione uma atividade positiva</option>
+                            </select>
+                            <small class="form-hint">💡 Configure mais atividades no botão ⚙️ acima</small>
+                        </div>
+                        <button id="btn-adicionar" class="btn btn-success">➕ Adicionar Pontos</button>
+                    </div>
+
+                    <!-- Remover Pontos -->
+                    <div class="card acao-card">
+                        <h2>❌ Remover Pontos</h2>
+                        <div class="form-group">
+                            <label for="filho-remover">Filho:</label>
+                            <select id="filho-remover" class="form-control">
+                                <!-- Opções serão preenchidas dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="atividade-remover">🎯 Escolha a atividade:</label>
+                            <select id="atividade-remover" class="form-control">
+                                <option value="" disabled selected>👆 Selecione uma atividade negativa</option>
+                            </select>
+                            <small class="form-hint">💡 Configure mais atividades no botão ⚙️ acima</small>
+                        </div>
+                        <button id="btn-remover" class="btn btn-danger">➖ Remover Pontos</button>
+                    </div>
+                </div>
+
+                <!-- Pontos Avulsos -->
+                <div class="card pontos-avulsos-card">
+                    <h2>⚡ Pontos Avulsos</h2>
+                    <p class="card-subtitle">Ações rápidas para pontos individuais</p>
+                    <div class="pontos-avulsos-grid">
+                        <div class="ponto-avulso">
+                            <h3>➕ Adicionar</h3>
+                            <div class="form-group">
+                                <label for="filho-avulso-add">Filho:</label>
+                                <select id="filho-avulso-add" class="form-control">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pontos-avulso-add">Pontos:</label>
+                                <input type="number" id="pontos-avulso-add" class="form-control" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="motivo-avulso-add">Motivo:</label>
+                                <input type="text" id="motivo-avulso-add" class="form-control" placeholder="Motivo rápido">
+                            </div>
+                            <button id="btn-avulso-add" class="btn btn-success btn-sm">➕ Adicionar</button>
+                        </div>
+                        
+                        <div class="ponto-avulso">
+                            <h3>➖ Remover</h3>
+                            <div class="form-group">
+                                <label for="filho-avulso-remove">Filho:</label>
+                                <select id="filho-avulso-remove" class="form-control">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pontos-avulso-remove">Pontos:</label>
+                                <input type="number" id="pontos-avulso-remove" class="form-control" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="motivo-avulso-remove">Motivo:</label>
+                                <input type="text" id="motivo-avulso-remove" class="form-control" placeholder="Motivo rápido">
+                            </div>
+                            <button id="btn-avulso-remove" class="btn btn-danger btn-sm">➖ Remover</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Histórico -->
+            <div class="historico-section">
+                <div class="card historico-card">
+                    <h2>📝 Histórico Recente</h2>
+                    <div class="historico-header">
+                        <div class="filtros-container">
+                            <div class="filtro-grupo">
+                                <label for="filtro-filho">👥 Filtrar por filho:</label>
+                                <select id="filtro-filho" class="filtro-select">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="filtro-grupo">
+                                <label for="filtro-periodo">📅 Filtrar por período:</label>
+                                <select id="filtro-periodo" class="filtro-select">
+                                    <option value="todos">📅 Todos os períodos</option>
+                                    <option value="hoje">📅 Hoje</option>
+                                    <option value="ontem">📅 Ontem</option>
+                                    <option value="semana">📅 Últimos 7 dias</option>
+                                    <option value="mes">📅 Últimos 30 dias</option>
+                                    <option value="personalizado">📅 Período personalizado</option>
+                                </select>
+                            </div>
+                            <div class="filtro-grupo" id="filtro-datas-personalizadas" style="display: none;">
+                                <label>📅 Período personalizado:</label>
+                                <div class="datas-container">
+                                    <input type="date" id="data-inicio" class="filtro-date">
+                                    <span>até</span>
+                                    <input type="date" id="data-fim" class="filtro-date">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="botoes-compartilhar">
+                            <button id="btn-compartilhar" class="btn btn-share">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div id="historico" class="historico-lista">
+                        <div class="historico-item">
+                            <span class="data">Hoje</span>
+                            <span class="acao">➕ João ganhou 10 pontos</span>
+                            <span class="motivo">Arrumou o quarto</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="modal-configuracoes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Configurações do Sistema</h2>
+                <button class="modal-close" id="fechar-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-tabs">
+                    <button class="tab-btn active" data-tab="filhos">👥 Filhos</button>
+                    <button class="tab-btn" data-tab="pontos">🎯 Atividades</button>
+                </div>
+
+                <!-- Aba Filhos -->
+                <div class="tab-content active" id="tab-filhos">
+                    <h3>👥 Configurações dos Filhos</h3>
+                    <div class="config-group">
+                        <h4>📝 Nomes dos Filhos</h4>
+                        <div class="input-group">
+                            <label>👦 Filho 1:</label>
+                            <input type="text" id="config-nome1" class="form-control" placeholder="Nome do primeiro filho">
+                        </div>
+                        <div class="input-group">
+                            <label>👧 Filho 2:</label>
+                            <input type="text" id="config-nome2" class="form-control" placeholder="Nome do segundo filho">
+                        </div>
+                        <div class="input-group">
+                            <label>👶 Filho 3:</label>
+                            <input type="text" id="config-nome3" class="form-control" placeholder="Nome do terceiro filho">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <h4>🎭 Emojis Personalizados</h4>
+                        <div class="input-group">
+                            <label>Emoji Filho 1:</label>
+                            <input type="text" id="emoji-filho1" class="form-control" maxlength="2" placeholder="👦">
+                        </div>
+                        <div class="input-group">
+                            <label>Emoji Filho 2:</label>
+                            <input type="text" id="emoji-filho2" class="form-control" maxlength="2" placeholder="👧">
+                        </div>
+                        <div class="input-group">
+                            <label>Emoji Filho 3:</label>
+                            <input type="text" id="emoji-filho3" class="form-control" maxlength="2" placeholder="👶">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba Atividades -->
+                <div class="tab-content" id="tab-pontos">
+                    <h3>🎯 Gerenciar Atividades</h3>
+                    
+                    <!-- Atividades Positivas -->
+                    <div class="config-group">
+                        <h4>➕ Atividades Positivas</h4>
+                        <div class="atividades-container">
+                            <div class="nova-atividade-form">
+                                <div class="input-row">
+                                    <input type="text" id="nova-atividade-positiva" class="form-control" placeholder="Ex: Arrumou o quarto">
+                                    <input type="number" id="pontos-atividade-positiva" class="form-control pontos-input" value="10" min="1" max="100">
+                                    <button onclick="adicionarAtividade('positiva')" class="btn btn-success btn-sm">➕</button>
+                                </div>
+                            </div>
+                            <div id="lista-atividades-positivas" class="lista-atividades"></div>
+                        </div>
+                    </div>
+
+                    <!-- Atividades Negativas -->
+                    <div class="config-group">
+                        <h4>➖ Atividades Negativas</h4>
+                        <div class="atividades-container">
+                            <div class="nova-atividade-form">
+                                <div class="input-row">
+                                    <input type="text" id="nova-atividade-negativa" class="form-control" placeholder="Ex: Não arrumou o quarto">
+                                    <input type="number" id="pontos-atividade-negativa" class="form-control pontos-input" value="5" min="1" max="100">
+                                    <button onclick="adicionarAtividade('negativa')" class="btn btn-danger btn-sm">➖</button>
+                                </div>
+                            </div>
+                            <div id="lista-atividades-negativas" class="lista-atividades"></div>
+                        </div>
+                    </div>
+
+                    <div class="config-group">
+                        <h4>🔄 Atividades Padrão</h4>
+                        <p class="help-text">�️ <strong>Removido:</strong> Esta seção estava duplicada e foi consolidada acima.</p>
+                    </div>
+                </div>
+
+                <!-- Aba de Backup removida -->
+            </div>
+            <div class="modal-footer">
+                <button id="btn-salvar-config" class="btn btn-success">💾 Salvar Configurações</button>
+                <button id="btn-cancelar-config" class="btn btn-secondary">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container de Notificações -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Módulo de Notificações Centralizado -->
+    <script src="utils/toast-utils.js"></script>
+    
+    <!-- Scripts Principais -->
+    <script src="script.js"></script>
+</body>
+</html>

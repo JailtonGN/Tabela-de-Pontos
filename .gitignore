@@ -1,0 +1,45 @@
+# Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de produção
+dist/
+build/
+
+# Arquivos de ambiente
+.env
+.env.local
+.env.production
+
+# Logs
+logs/
+*.log
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Credenciais
+*.json
+!package.json
+!package-lock.json
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Arquivos de configuração específicos
+continue.config.json
+.qodo/
