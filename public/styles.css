@@ -1163,8 +1163,24 @@ body {
     padding: 20px 25px;
     border-top: 1px solid #e2e8f0;
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    align-items: center;
     gap: 15px;
+    flex-wrap: wrap;
+}
+
+.footer-left, .footer-right {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.footer-left {
+    flex: 1;
+}
+
+.footer-right {
+    flex-shrink: 0;
 }
 
 /* Botões aprimorados */
@@ -1305,5 +1321,23 @@ body {
     
     .modal-header h2 {
         font-size: 1.3rem;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .footer-left, .footer-right {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .footer-left {
+        order: 2;
+    }
+    
+    .footer-right {
+        order: 1;
     }
 }

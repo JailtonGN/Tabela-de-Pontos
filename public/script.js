@@ -6,6 +6,37 @@ let atividadesPositivas = []; // Atividades que ganham pontos
 let atividadesNegativas = []; // Atividades que perdem pontos
 let historico = [];
 let pontos = {}; // Objeto para armazenar pontos dos filhos
+let logs = []; // Sistema de log para todas as ações
+
+// Sistema de Log
+function adicionarLog(acao, detalhes = {}) {
+    const log = {
+        id: Date.now() + Math.random().toString(36).substr(2, 9),
+        timestamp: new Date().toISOString(),
+        data: new Date().toLocaleString('pt-BR'),
+        acao: acao,
+        usuario: 'Admin', // Pode ser expandido futuramente
+        detalhes: detalhes,
+        ip: 'local' // Para app local
+    };
+    
+    logs.push(log);
+    salvarLogs();
+    console.log('📋 Log adicionado:', log);
+}
+
+// Salvar logs no localStorage
+function salvarLogs() {
+    localStorage.setItem('pontos_logs', JSON.stringify(logs));
+}
+
+// Carregar logs do localStorage
+function carregarLogs() {
+    const logsStorage = localStorage.getItem('pontos_logs');
+    if (logsStorage) {
+        logs = JSON.parse(logsStorage);
+    }
+}
 
 // Cores disponíveis para os filhos
 const coresDisponiveis = [
@@ -384,6 +415,13 @@ function removerFilho(id) {
         return;
     }
     
+    // Adicionar log antes de remover
+    adicionarLog('remover_filho', {
+        filho: filho.nome,
+        pontos_finais: filho.pontos,
+        cor: filho.cor
+    });
+    
     // Remover filho da lista
     filhos = filhos.filter(f => f.id !== id);
     
@@ -423,6 +461,8 @@ function configurarEventos() {
     const fecharModal = document.getElementById('fechar-modal');
     const cancelarConfig = document.getElementById('btn-cancelar-config');
     const salvarConfig = document.getElementById('btn-salvar-config');
+    const btnBaixarLog = document.getElementById('btn-baixar-log');
+    const btnResetarPontos = document.getElementById('btn-resetar-pontos');
     
     if (fecharModal) {
         fecharModal.addEventListener('click', fecharModalConfiguracoes);
@@ -432,6 +472,12 @@ function configurarEventos() {
     }
     if (salvarConfig) {
         salvarConfig.addEventListener('click', salvarConfiguracoes);
+    }
+    if (btnBaixarLog) {
+        btnBaixarLog.addEventListener('click', baixarLog);
+    }
+    if (btnResetarPontos) {
+        btnResetarPontos.addEventListener('click', resetarPontos);
     }
     
     // Fechar modal clicando fora
@@ -892,7 +938,18 @@ async function handleAdicionarPontos(e) {
         
         if (data.success) {
             // Atualizar pontos localmente
+            const pontosAntes = filho.pontos;
             filho.pontos += atividade.pontos;
+            
+            // Adicionar log da ação
+            adicionarLog('adicionar_pontos', {
+                filho: filho.nome,
+                atividade: atividade.nome,
+                pontos: atividade.pontos,
+                pontos_antes: pontosAntes,
+                pontos_depois: filho.pontos,
+                tipo: 'positiva'
+            });
             
             // Limpar formulário
             atividadeSelect.value = '';
@@ -949,7 +1006,18 @@ async function handleRemoverPontos(e) {
         
         if (data.success) {
             // Atualizar pontos localmente (permitir pontos negativos)
+            const pontosAntes = filho.pontos;
             filho.pontos -= atividade.pontos;
+            
+            // Adicionar log da ação
+            adicionarLog('remover_pontos', {
+                filho: filho.nome,
+                atividade: atividade.nome,
+                pontos: atividade.pontos,
+                pontos_antes: pontosAntes,
+                pontos_depois: filho.pontos,
+                tipo: 'negativa'
+            });
             
             // Limpar formulário
             atividadeSelect.value = '';
@@ -2476,4 +2544,91 @@ function mostrarToast(message, type = 'success') {
     }
     
     console.log('✅ Sistema de Pontos Iniciado com Sucesso!');
+});
+
+// ============== SISTEMA DE LOG E UTILITÁRIOS ==============
+
+// Função para baixar log
+function baixarLog() {
+    if (logs.length === 0) {
+        mostrarNotificacao('📋 Nenhum log disponível para download!', 'warning');
+        return;
+    }
+    
+    // Criar cabeçalho do CSV
+    const cabecalho = ['Data/Hora', 'Ação', 'Filho', 'Atividade', 'Pontos', 'Pontos Antes', 'Pontos Depois', 'Tipo'];
+    
+    // Converter logs para CSV
+    const csvContent = [
+        cabecalho.join(','),
+        ...logs.map(log => [
+            log.data,
+            log.acao.replace('_', ' ').toUpperCase(),
+            log.detalhes.filho || '',
+            log.detalhes.atividade || '',
+            log.detalhes.pontos || '',
+            log.detalhes.pontos_antes || '',
+            log.detalhes.pontos_depois || '',
+            log.detalhes.tipo || ''
+        ].join(','))
+    ].join('\n');
+    
+    // Criar arquivo para download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `log_pontos_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    adicionarLog('download_log', {
+        total_registros: logs.length,
+        formato: 'CSV'
+    });
+    
+    mostrarNotificacao(`📋 Log baixado com ${logs.length} registros!`, 'success');
+}
+
+// Função para resetar pontos
+function resetarPontos() {
+    if (filhos.length === 0) {
+        mostrarNotificacao('👨‍👩‍👧‍👦 Nenhuma criança cadastrada para resetar!', 'warning');
+        return;
+    }
+    
+    const confirmacao = confirm(`🔄 Tem certeza que deseja resetar todos os pontos?\n\nIsto irá:\n• Zerar os pontos de todas as crianças\n• Manter o histórico preservado\n• Registrar esta ação no log\n\nEsta ação não pode ser desfeita!`);
+    
+    if (!confirmacao) {
+        return;
+    }
+    
+    // Salvar pontos atuais antes do reset
+    const pontosAnteriores = {};
+    filhos.forEach(filho => {
+        pontosAnteriores[filho.nome] = filho.pontos;
+        filho.pontos = 0;
+    });
+    
+    // Adicionar log do reset
+    adicionarLog('resetar_pontos', {
+        total_criancas: filhos.length,
+        pontos_anteriores: pontosAnteriores,
+        motivo: 'Reset mensal/manual'
+    });
+    
+    // Atualizar interface e salvar
+    atualizarInterface();
+    salvarDados();
+    
+    mostrarNotificacao(`🔄 Pontos resetados para ${filhos.length} crianças!`, 'success');
+}
+
+// Atualizar função de inicialização para carregar logs
+document.addEventListener('DOMContentLoaded', function() {
+    carregarLogs();
 }); 
