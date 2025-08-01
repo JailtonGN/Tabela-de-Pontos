@@ -1,0 +1,9 @@
+# Render Deploy Configuration
+# https://render.com
+
+# Build Command: npm install
+# Start Command: npm start
+# Environment: Node
+# Auto-Deploy: Yes
+
+# Este arquivo é apenas informativo para facilitar o deploy no Render
