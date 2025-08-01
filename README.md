@@ -2,6 +2,8 @@
 
 Um aplicativo web intuitivo para pais gerenciarem e acompanharem o comportamento dos filhos através de um sistema de pontos gamificado.
 
+🚀 **Atualização**: Sistema de log completo implementado com download CSV e reset mensal!
+
 ## ✨ Funcionalidades
 
 ### 🎯 **Sistema de Atividades Pré-definidas**
