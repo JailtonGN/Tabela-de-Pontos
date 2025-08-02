@@ -1,4 +1,16 @@
-# 🏆 Sistema de Pontos para Crianças
+# 🏆 Sistema de Pontos p### 📊 **Relatórios e Histórico**
+- 📝 **Histórico Detalhado**: Registro de todas as atividades
+- 📄 **Exportação**: PDF e TXT para compartilhamento
+- 📤 **WhatsApp**: Compartilhe relatórios facilmente
+- 📋 **Sistema de Log**: Download CSV com auditoria completa
+- 🔄 **Reset Mensal**: Reinicie pontos no final do mês
+
+### ☁️ **Sincronização Multi-dispositivo**
+- 🌐 **Backend Integrado**: Dados sincronizam entre dispositivos
+- 📱 **PC ↔ Celular**: Acesse de qualquer lugar
+- 🔄 **Sync Automático**: Sincronização a cada 30 segundos
+- 📶 **Modo Offline**: Funciona sem internet, sincroniza depois
+- 💾 **Backup Duplo**: localStorage + servidorCrianças
 
 Um aplicativo web intuitivo para pais gerenciarem e acompanharem o comportamento dos filhos através de um sistema de pontos gamificado.
 
