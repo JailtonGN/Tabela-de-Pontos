@@ -13,8 +13,8 @@ class LoginSystem {
         this.btnGuest = document.getElementById('btn-guest');
 
         // Seções de login
-        this.loginPai = document.getElementById('login-pai');
-        this.loginAdmin = document.getElementById('login-admin');
+        this.loginPaiForm = document.getElementById('login-pai');
+        this.loginAdminForm = document.getElementById('login-admin');
         this.loginGuestForm = document.getElementById('login-guest');
 
         // Campos de input
