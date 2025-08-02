@@ -37,7 +37,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (!currentUser) {
         console.error('❌ Dados do usuário inválidos, redirecionando para login...');
-        window.location.href = '/login.html';
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+        } else {
+            window.location.href = '/login.html';
+        }
         return;
     }
 

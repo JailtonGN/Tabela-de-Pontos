@@ -293,6 +293,12 @@
     
     <!-- Sistema de Autenticação -->
     <script>
+        // Forçar redirecionamento para o login no Render
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // Se não estiver em desenvolvimento local, redirecionar para o login no Render
+            window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+        }
+
         // Definir AuthUtils antes de carregar outros scripts
         window.AuthUtils = {
             isLoggedIn() {
@@ -318,12 +324,20 @@
 
             logout() {
                 localStorage.removeItem('userSession');
-                window.location.href = '/login.html';
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                } else {
+                    window.location.href = '/login.html';
+                }
             },
 
             requireAuth() {
                 if (!this.isLoggedIn()) {
-                    window.location.href = '/login.html';
+                    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                        window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                    } else {
+                        window.location.href = '/login.html';
+                    }
                     return false;
                 }
                 return true;
