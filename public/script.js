@@ -174,8 +174,8 @@ function configurarInterfacePorPermissao(user) {
                 box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             `;
             avisoDiv.innerHTML = `
-                <h3 style="margin: 0 0 10px 0; font-size: 1.4em;">👀 Modo Visitante</h3>
-                <p style="margin: 0; opacity: 0.9;">Você está visualizando apenas os pontos atuais. Para gerenciar pontos, faça login como responsável.</p>
+                <h3 style="margin: 0 0 10px 0; font-size: 1.4em; color: white;">👀 Modo Visitante</h3>
+                <p style="margin: 0; color: white; opacity: 0.9;">Você está visualizando apenas os pontos atuais. Para gerenciar pontos, faça login como responsável.</p>
             `;
             
             // Inserir após o dashboard
