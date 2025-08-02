@@ -73,8 +73,37 @@ function configurarInterfacePorPermissao(user) {
     if (headerControls) {
         const logoutBtn = document.createElement('button');
         logoutBtn.className = 'btn-logout';
-        logoutBtn.innerHTML = '🚪 Sair';
-        logoutBtn.title = 'Fazer logout';
+        
+        if (type === 'guest') {
+            logoutBtn.innerHTML = '� Fazer Login';
+            logoutBtn.title = 'Fazer login para gerenciar pontos';
+            logoutBtn.style.cssText = `
+                background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                margin-left: 10px;
+                transition: all 0.3s ease;
+            `;
+        } else {
+            logoutBtn.innerHTML = '�🚪 Sair';
+            logoutBtn.title = 'Fazer logout';
+            logoutBtn.style.cssText = `
+                background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 600;
+                margin-left: 10px;
+                transition: all 0.3s ease;
+            `;
+        }
+        
         logoutBtn.onclick = () => AuthUtils.logout();
         headerControls.appendChild(logoutBtn);
     }
@@ -107,21 +136,73 @@ function configurarInterfacePorPermissao(user) {
 
     // Para visitantes, mostrar apenas a visualização
     if (type === 'guest') {
-        document.querySelectorAll('.acao-card').forEach(card => {
-            card.style.display = 'none';
-        });
+        console.log('👀 Configurando modo visitante...');
+        
+        // Esconder TODA a seção de ações (adicionar/remover pontos)
+        const acoesSection = document.querySelector('.acoes-section');
+        if (acoesSection) {
+            acoesSection.style.display = 'none';
+            console.log('🚫 Seção de ações escondida');
+        }
+        
+        // Esconder seção de histórico também para simplicidade
+        const historicoSection = document.querySelector('.historico-section');
+        if (historicoSection) {
+            historicoSection.style.display = 'none';
+            console.log('🚫 Seção de histórico escondida');
+        }
+        
+        // Esconder botão de configurações
+        const configBtn = document.getElementById('btn-configuracoes');
+        if (configBtn) {
+            configBtn.style.display = 'none';
+            console.log('🚫 Botão de configurações escondido');
+        }
         
         // Adicionar aviso para visitantes
         const mainContent = document.querySelector('.main-content');
-        const avisoDiv = document.createElement('div');
-        avisoDiv.className = 'aviso-visitante';
-        avisoDiv.innerHTML = `
-            <div class="card">
-                <h3>👀 Modo Visitante</h3>
-                <p>Você está no modo de visualização. Para adicionar ou remover pontos, use o botão "🚪 Sair" no canto superior direito e faça login como pai/mãe ou administrador.</p>
-            </div>
-        `;
-        mainContent.insertBefore(avisoDiv, mainContent.firstChild);
+        if (mainContent) {
+            const avisoDiv = document.createElement('div');
+            avisoDiv.className = 'aviso-visitante';
+            avisoDiv.style.cssText = `
+                margin: 20px 0;
+                padding: 20px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 15px;
+                color: white;
+                text-align: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            `;
+            avisoDiv.innerHTML = `
+                <h3 style="margin: 0 0 10px 0; font-size: 1.4em;">👀 Modo Visitante</h3>
+                <p style="margin: 0; opacity: 0.9;">Você está visualizando apenas os pontos atuais. Para gerenciar pontos, faça login como responsável.</p>
+            `;
+            
+            // Inserir após o dashboard
+            const dashboardSection = document.querySelector('.dashboard-section');
+            if (dashboardSection && dashboardSection.nextSibling) {
+                mainContent.insertBefore(avisoDiv, dashboardSection.nextSibling);
+            } else {
+                mainContent.appendChild(avisoDiv);
+            }
+            console.log('✅ Aviso de visitante adicionado');
+        }
+        
+        // Melhorar o dashboard para visitantes
+        const dashboardCard = document.querySelector('.pontos-card');
+        if (dashboardCard) {
+            dashboardCard.style.cssText += `
+                background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                border: 2px solid #e0e6ed;
+                box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            `;
+            
+            const titulo = dashboardCard.querySelector('h2');
+            if (titulo) {
+                titulo.innerHTML = '👀 📊 Pontos Atuais - Modo Visualização';
+                titulo.style.color = '#4a5568';
+            }
+        }
     }
 }
 
