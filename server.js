@@ -19,9 +19,11 @@ const jsonBinStorage = new JSONBinStorage();
 // Conectar ao MongoDB (fallback)
 const connectDB = async () => {
     try {
-        const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tabela-pontos';
+        // URL direta do MongoDB Atlas
+        const mongoURI = 'mongodb+srv://tabela-pontos:TabelaPontos2025!@cluster0.nblesgu.mongodb.net/tabela-pontos?retryWrites=true&w=majority&appName=Cluster0';
         await mongoose.connect(mongoURI);
-        console.log('🗄️ MongoDB conectado com sucesso');
+        console.log('🗄️ MongoDB Atlas conectado com sucesso!');
+        console.log('🌐 Cluster:', mongoURI.split('@')[1].split('/')[0]);
     } catch (error) {
         console.error('❌ Erro ao conectar MongoDB:', error.message);
         console.log('🌐 Usando JSONBin como armazenamento principal');
