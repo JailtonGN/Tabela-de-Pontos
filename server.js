@@ -350,6 +350,80 @@ app.post('/api/historico', async (req, res) => {
     }
 });
 
+// Rota para diagnóstico - VERIFICAR ONDE OS DADOS ESTÃO SENDO SALVOS
+app.get('/api/status', async (req, res) => {
+    const status = {
+        timestamp: new Date().toISOString(),
+        storage: {
+            jsonbin: {
+                status: 'testing...',
+                working: false
+            },
+            mongodb: {
+                status: mongoose.connection.readyState === 1 ? 'conectado' : 'desconectado',
+                working: mongoose.connection.readyState === 1
+            },
+            localFile: {
+                status: 'sempre disponível',
+                working: true,
+                pontosFile: fs.existsSync(PONTOS_FILE),
+                historicoFile: fs.existsSync(HISTORICO_FILE)
+            }
+        },
+        data: {
+            pontos: {},
+            historico: [],
+            lastAction: 'Verificação completa do sistema'
+        }
+    };
+
+    // Testar JSONBin
+    try {
+        const pontosJSONBin = await jsonBinStorage.carregarPontos();
+        if (pontosJSONBin && Object.keys(pontosJSONBin).length > 0) {
+            status.storage.jsonbin.status = 'funcionando ✅';
+            status.storage.jsonbin.working = true;
+            status.data.pontos = pontosJSONBin;
+            status.data.lastAction = 'Dados carregados do JSONBin';
+        } else {
+            status.storage.jsonbin.status = 'vazio ou erro ❌';
+        }
+    } catch (error) {
+        status.storage.jsonbin.status = `erro: ${error.message}`;
+    }
+
+    // Testar MongoDB
+    if (mongoose.connection.readyState === 1) {
+        try {
+            const pontosDB = await Pontos.find({});
+            const pontosObj = {};
+            pontosDB.forEach(p => {
+                pontosObj[p.nome.toLowerCase()] = p.pontos;
+            });
+            if (Object.keys(pontosObj).length > 0) {
+                status.data.pontos = pontosObj;
+                status.data.lastAction = 'Dados carregados do MongoDB';
+            }
+        } catch (error) {
+            status.storage.mongodb.status = `erro: ${error.message}`;
+        }
+    }
+
+    // Carregar arquivo local (sempre funciona)
+    const pontosLocal = lerDados(PONTOS_FILE);
+    if (Object.keys(pontosLocal).length > 0) {
+        status.data.pontos = pontosLocal;
+        status.data.lastAction = 'Dados carregados do arquivo local';
+    }
+
+    const historicoLocal = lerDados(HISTORICO_FILE);
+    if (historicoLocal.historico) {
+        status.data.historico = historicoLocal.historico.slice(0, 3); // Primeiros 3 registros
+    }
+
+    res.json(status);
+});
+
 // Rota principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
