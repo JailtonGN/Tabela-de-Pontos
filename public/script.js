@@ -107,7 +107,7 @@ function configurarInterfacePorPermissao(user) {
             <div class="card">
                 <h3>👀 Modo Visitante</h3>
                 <p>Você está no modo de visualização. Para adicionar ou remover pontos, faça login como pai/mãe ou administrador.</p>
-                <button onclick="window.location.href='/login.html'" class="btn-login-redirect">
+                <button onclick="redirecionarParaLogin()" class="btn-login-redirect">
                     🔐 Fazer Login
                 </button>
             </div>
@@ -2903,6 +2903,17 @@ function resetarPontos() {
     salvarDados();
     
     mostrarNotificacao(`🔄 Pontos resetados para ${filhos.length} crianças!`, 'success');
+}
+
+// Função para redirecionar para login
+function redirecionarParaLogin() {
+    console.log('🔐 Redirecionando para login...');
+    
+    // Limpar sessão de visitante se existir
+    localStorage.removeItem('userSession');
+    
+    // Redirecionar para página de login
+    window.location.href = '/login.html';
 }
 
 // Atualizar função de inicialização para carregar logs
