@@ -659,6 +659,53 @@ app.get('/api/status', async (req, res) => {
     res.json(status);
 });
 
+// Rota para sincronizar crianças baseadas nos pontos existentes
+app.get('/api/sincronizar-criancas', async (req, res) => {
+    try {
+        const criancas = [];
+        const cores = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F'];
+        const emojis = ['👦', '👧', '🧒', '👶', '🤴', '👸', '🦸‍♂️', '🦸‍♀️'];
+        
+        // Tentar MongoDB primeiro
+        if (mongoose.connection.readyState === 1) {
+            const pontosDB = await Pontos.find({});
+            pontosDB.forEach((pontoDoc, index) => {
+                if (pontoDoc.nome && pontoDoc.nome !== 'testeatlas') { // Pular nome de teste
+                    criancas.push({
+                        id: index + 1,
+                        nome: pontoDoc.nome.charAt(0).toUpperCase() + pontoDoc.nome.slice(1),
+                        emoji: emojis[index % emojis.length],
+                        cor: cores[index % cores.length],
+                        pontos: pontoDoc.pontos || 0
+                    });
+                }
+            });
+        } else {
+            // Fallback: arquivo local
+            const pontosLocal = lerDados(PONTOS_FILE);
+            let index = 0;
+            for (const [nome, pontos] of Object.entries(pontosLocal)) {
+                if (nome && nome !== 'testeatlas') { // Pular nome de teste
+                    criancas.push({
+                        id: index + 1,
+                        nome: nome.charAt(0).toUpperCase() + nome.slice(1),
+                        emoji: emojis[index % emojis.length],
+                        cor: cores[index % cores.length],
+                        pontos: pontos || 0
+                    });
+                    index++;
+                }
+            }
+        }
+        
+        console.log('👨‍👩‍👧‍👦 Crianças sincronizadas:', criancas);
+        res.json({ success: true, criancas: criancas });
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar crianças:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor', criancas: [] });
+    }
+});
+
 // Rota principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));

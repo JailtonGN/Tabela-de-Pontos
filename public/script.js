@@ -161,10 +161,28 @@ async function sincronizarDados() {
             pontos = pontosServidor;
         }
         
+        // Carregar e sincronizar crianças baseadas nos pontos
+        const criancasServidor = await apiRequest('/sincronizar-criancas');
+        if (criancasServidor && criancasServidor.success && criancasServidor.criancas.length > 0) {
+            filhos = criancasServidor.criancas;
+            console.log('👨‍👩‍👧‍👦 Crianças sincronizadas do servidor:', filhos);
+            
+            // Salvar no localStorage para manter consistência
+            localStorage.setItem('filhos', JSON.stringify(filhos));
+        }
+        
         // Carregar histórico do servidor
         const historicoServidor = await apiRequest('/historico');
-        if (historicoServidor && historicoServidor.historico) {
-            historico = historicoServidor.historico;
+        if (historicoServidor && Array.isArray(historicoServidor)) {
+            historico = historicoServidor.map(item => ({
+                id: item.id || Date.now(),
+                data: new Date(item.data).toLocaleString('pt-BR'),
+                nome: item.nome,
+                pontos: item.pontos,
+                motivo: item.motivo,
+                tipo: item.tipo
+            }));
+            console.log('📋 Histórico sincronizado:', historico.length, 'registros');
         }
         
         console.log('✅ Dados sincronizados com o servidor');
@@ -270,6 +288,16 @@ async function inicializarApp() {
     await carregarDados();
     configurarEventos();
     atualizarTela();
+    
+    // Carregar logs
+    carregarLogs();
+    
+    // Inicializar WebSocket após um pequeno delay
+    setTimeout(() => {
+        inicializarWebSocket();
+    }, 1000);
+    
+    console.log('✅ Aplicação inicializada com sucesso!');
 }
 
 // Inicialização original (será removida pela nova estrutura de autenticação)
@@ -290,41 +318,48 @@ async function carregarDados() {
     const sincronizado = await sincronizarDados();
     
     if (!sincronizado) {
-        console.log('⚠️ Usando dados locais (localStorage)');
-        // Fallback para localStorage se servidor não disponível
-        const filhosSalvos = localStorage.getItem('filhos');
-        const atividadesPositivasSalvas = localStorage.getItem('atividadesPositivas');
-        const atividadesNegativasSalvas = localStorage.getItem('atividadesNegativas');
-        const historicoSalvo = localStorage.getItem('historico');
-        
-        if (filhosSalvos) {
-            filhos = JSON.parse(filhosSalvos);
-        }
-        
-        if (atividadesPositivasSalvas) {
-            atividadesPositivas = JSON.parse(atividadesPositivasSalvas);
-        }
-        
-        if (atividadesNegativasSalvas) {
-            atividadesNegativas = JSON.parse(atividadesNegativasSalvas);
-        }
-        
-        if (historicoSalvo) {
-            historico = JSON.parse(historicoSalvo);
-        }
+        console.log('⚠️ Usando dados locais (localStorage) como fallback');
+        carregarDoLocalStorage();
+    } else {
+        console.log('✅ Dados sincronizados com o servidor');
     }
     
-    // Carregar configurações locais (filhos e atividades ainda ficam no localStorage)
-    const filhosSalvos = localStorage.getItem('filhos');
+    // Carregar configurações de atividades do localStorage
     const atividadesPositivasSalvas = localStorage.getItem('atividadesPositivas');
     const atividadesNegativasSalvas = localStorage.getItem('atividadesNegativas');
     
-    console.log('🔍 Debug - Dados no localStorage:');
-    console.log('Filhos salvos:', filhosSalvos);
+    if (atividadesPositivasSalvas) {
+        atividadesPositivas = JSON.parse(atividadesPositivasSalvas);
+    } else {
+        // Atividades padrão
+        atividadesPositivas = [
+            { id: 1, nome: 'Arrumou o quarto', pontos: 10 },
+            { id: 2, nome: 'Fez a lição de casa', pontos: 15 }
+        ];
+    }
+    
+    if (atividadesNegativasSalvas) {
+        atividadesNegativas = JSON.parse(atividadesNegativasSalvas);
+    } else {
+        // Atividades padrão
+        atividadesNegativas = [
+            { id: 1, nome: 'Não arrumou o quarto', pontos: 5 },
+            { id: 2, nome: 'Mau comportamento', pontos: 8 }
+        ];
+    }
+}
+
+// Função auxiliar para carregar dados do localStorage
+function carregarDoLocalStorage() {
+    console.log('📱 Carregando dados do localStorage...');
+    
+    const filhosSalvos = localStorage.getItem('filhos');
+    const historicoSalvo = localStorage.getItem('historico');
+    const pontosSalvos = localStorage.getItem('pontos');
     
     if (filhosSalvos) {
         filhos = JSON.parse(filhosSalvos);
-        console.log('✅ Filhos carregados:', filhos);
+        console.log('👨‍👩‍👧‍👦 Filhos carregados do localStorage:', filhos);
     } else {
         // Inicializar com filhos de exemplo se não houver dados
         filhos = [
@@ -346,28 +381,16 @@ async function carregarDados() {
         console.log('⚠️ Usando filhos padrão:', filhos);
     }
     
-    if (atividadesPositivasSalvas) {
-        atividadesPositivas = JSON.parse(atividadesPositivasSalvas);
-    } else {
-        // Atividades padrão
-        atividadesPositivas = [
-            { id: 1, nome: 'Arrumou o quarto', pontos: 10 },
-            { id: 2, nome: 'Fez a lição de casa', pontos: 15 }
-        ];
+    if (historicoSalvo) {
+        historico = JSON.parse(historicoSalvo);
+        console.log('📋 Histórico carregado do localStorage');
     }
     
-    if (atividadesNegativasSalvas) {
-        atividadesNegativas = JSON.parse(atividadesNegativasSalvas);
-    } else {
-        // Atividades padrão
-        atividadesNegativas = [
-            { id: 1, nome: 'Não arrumou o quarto', pontos: 5 },
-            { id: 2, nome: 'Mau comportamento', pontos: 8 }
-        ];
-    }
-    
-    // Sincronizar pontos dos filhos com dados do servidor
-    if (Object.keys(pontos).length > 0) {
+    if (pontosSalvos) {
+        pontos = JSON.parse(pontosSalvos);
+        console.log('📊 Pontos carregados do localStorage');
+        
+        // Sincronizar pontos dos filhos
         filhos.forEach(filho => {
             if (pontos[filho.nome] !== undefined) {
                 filho.pontos = pontos[filho.nome];
@@ -2727,11 +2750,9 @@ function atualizarSelectsAtividades() {
     }
 }
 
-// Inicialização final - garantir que tudo está carregado
-document.addEventListener('DOMContentLoaded', async function() {
-    console.log('🚀 Sistema de Pontos Inicializando...');
+// Removido - event listener duplicado
     
-    // Funções de atividades
+// Funções de atividades
 function atualizarListaAtividades(tipo) {
     const lista = document.getElementById(tipo === 'positiva' ? 'lista-atividades-positivas' : 'lista-atividades-negativas');
     const array = tipo === 'positiva' ? atividadesPositivas : atividadesNegativas;
@@ -2824,7 +2845,6 @@ function mostrarToast(message, type = 'success') {
     }
     
     console.log('✅ Sistema de Pontos Iniciado com Sucesso!');
-});
 
 // ============== SISTEMA DE LOG E UTILITÁRIOS ==============
 
@@ -3023,12 +3043,4 @@ function notificarAlteracaoWebSocket(tipo, nome, pontos, atividade) {
     }
 }
 
-// Atualizar função de inicialização para incluir WebSocket
-document.addEventListener('DOMContentLoaded', function() {
-    carregarLogs();
-    
-    // Inicializar WebSocket após um pequeno delay
-    setTimeout(() => {
-        inicializarWebSocket();
-    }, 1000);
-}); 
+// Atualizar função de inicialização para incluir WebSocket 
