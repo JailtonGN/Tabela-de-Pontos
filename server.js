@@ -122,6 +122,51 @@ function salvarDados(arquivo, dados) {
     }
 }
 
+// Função para salvar no histórico (MongoDB + Local)
+async function salvarHistorico(dadosLog) {
+    try {
+        // Salvar no MongoDB se disponível
+        if (mongoose.connection.readyState === 1) {
+            const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
+            const novoId = ultimoHistorico ? ultimoHistorico.id + 1 : 1;
+
+            const novoLog = new Historico({
+                id: novoId,
+                nome: dadosLog.usuario,
+                pontos: 0,
+                motivo: `${dadosLog.tipo}: ${dadosLog.tipoUsuario}`,
+                tipo: 'sistema',
+                data: new Date(dadosLog.timestamp)
+            });
+
+            await novoLog.save();
+            console.log('📝 Log salvo no MongoDB:', dadosLog.tipo);
+        }
+
+        // Backup local
+        const historicoLocal = lerDados(HISTORICO_FILE);
+        const novoRegistroLocal = {
+            id: historicoLocal.length ? Math.max(...historicoLocal.map(h => h.id || 0)) + 1 : 1,
+            nome: dadosLog.usuario,
+            pontos: 0,
+            motivo: `${dadosLog.tipo}: ${dadosLog.tipoUsuario}`,
+            tipo: 'sistema',
+            data: dadosLog.timestamp
+        };
+        
+        if (Array.isArray(historicoLocal)) {
+            historicoLocal.unshift(novoRegistroLocal);
+        } else {
+            historicoLocal = [novoRegistroLocal];
+        }
+        
+        salvarDados(HISTORICO_FILE, historicoLocal);
+        console.log('📝 Log salvo localmente');
+    } catch (error) {
+        console.error('❌ Erro ao salvar log:', error);
+    }
+}
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
