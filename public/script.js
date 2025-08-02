@@ -8,6 +8,77 @@ let historico = [];
 let pontos = {}; // Objeto para armazenar pontos dos filhos
 let logs = []; // Sistema de log para todas as ações
 
+// Sistema de Sincronização com Backend
+const API_BASE = window.location.origin;
+
+// Função para fazer requisições ao backend
+async function apiRequest(endpoint, method = 'GET', data = null) {
+    try {
+        const options = {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        };
+        
+        if (data) {
+            options.body = JSON.stringify(data);
+        }
+        
+        const response = await fetch(`${API_BASE}/api${endpoint}`, options);
+        
+        if (!response.ok) {
+            throw new Error(`Erro na API: ${response.status}`);
+        }
+        
+        return await response.json();
+    } catch (error) {
+        console.error('Erro na comunicação com o servidor:', error);
+        // Fallback para localStorage se o servidor não estiver disponível
+        return null;
+    }
+}
+
+// Sincronizar dados com o servidor
+async function sincronizarDados() {
+    try {
+        // Carregar pontos do servidor
+        const pontosServidor = await apiRequest('/pontos');
+        if (pontosServidor) {
+            pontos = pontosServidor;
+        }
+        
+        // Carregar histórico do servidor
+        const historicoServidor = await apiRequest('/historico');
+        if (historicoServidor && historicoServidor.historico) {
+            historico = historicoServidor.historico;
+        }
+        
+        console.log('✅ Dados sincronizados com o servidor');
+        return true;
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar dados:', error);
+        return false;
+    }
+}
+
+// Salvar dados no servidor
+async function salvarNoServidor() {
+    try {
+        // Salvar pontos
+        await apiRequest('/pontos', 'POST', pontos);
+        
+        // Salvar histórico
+        await apiRequest('/historico', 'POST', { historico });
+        
+        console.log('✅ Dados salvos no servidor');
+        return true;
+    } catch (error) {
+        console.error('❌ Erro ao salvar no servidor:', error);
+        return false;
+    }
+}
+
 // Sistema de Log
 function adicionarLog(acao, detalhes = {}) {
     const log = {
@@ -38,6 +109,36 @@ function carregarLogs() {
     }
 }
 
+// Sincronização automática (executa a cada 30 segundos)
+setInterval(async () => {
+    if (navigator.onLine) {
+        const sincronizado = await sincronizarDados();
+        if (sincronizado) {
+            // Atualizar pontos dos filhos com dados do servidor
+            filhos.forEach(filho => {
+                if (pontos[filho.nome] !== undefined && pontos[filho.nome] !== filho.pontos) {
+                    filho.pontos = pontos[filho.nome];
+                }
+            });
+            atualizarInterface();
+        }
+    }
+}, 30000);
+
+// Detectar quando volta a ter internet
+window.addEventListener('online', async () => {
+    console.log('🌐 Conexão restaurada, sincronizando dados...');
+    mostrarNotificacao('🌐 Sincronizando dados...', 'info');
+    await sincronizarDados();
+    await salvarDados();
+    mostrarNotificacao('✅ Dados sincronizados!', 'success');
+});
+
+window.addEventListener('offline', () => {
+    console.log('📱 Modo offline - dados salvos localmente');
+    mostrarNotificacao('📱 Modo offline - dados salvos localmente', 'warning');
+});
+
 // Cores disponíveis para os filhos
 const coresDisponiveis = [
     { nome: 'Azul', valor: '#4facfe', gradiente: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
@@ -51,18 +152,48 @@ const coresDisponiveis = [
 ];
 
 // Inicialização
-document.addEventListener('DOMContentLoaded', function() {
-    carregarDados();
+document.addEventListener('DOMContentLoaded', async function() {
+    await carregarDados();
     configurarEventos();
     atualizarTela();
 });
 
 // Carregar dados salvos
-function carregarDados() {
+async function carregarDados() {
+    console.log('🔍 Carregando dados...');
+    
+    // Tentar sincronizar com o servidor primeiro
+    const sincronizado = await sincronizarDados();
+    
+    if (!sincronizado) {
+        console.log('⚠️ Usando dados locais (localStorage)');
+        // Fallback para localStorage se servidor não disponível
+        const filhosSalvos = localStorage.getItem('filhos');
+        const atividadesPositivasSalvas = localStorage.getItem('atividadesPositivas');
+        const atividadesNegativasSalvas = localStorage.getItem('atividadesNegativas');
+        const historicoSalvo = localStorage.getItem('historico');
+        
+        if (filhosSalvos) {
+            filhos = JSON.parse(filhosSalvos);
+        }
+        
+        if (atividadesPositivasSalvas) {
+            atividadesPositivas = JSON.parse(atividadesPositivasSalvas);
+        }
+        
+        if (atividadesNegativasSalvas) {
+            atividadesNegativas = JSON.parse(atividadesNegativasSalvas);
+        }
+        
+        if (historicoSalvo) {
+            historico = JSON.parse(historicoSalvo);
+        }
+    }
+    
+    // Carregar configurações locais (filhos e atividades ainda ficam no localStorage)
     const filhosSalvos = localStorage.getItem('filhos');
     const atividadesPositivasSalvas = localStorage.getItem('atividadesPositivas');
     const atividadesNegativasSalvas = localStorage.getItem('atividadesNegativas');
-    const historicoSalvo = localStorage.getItem('historico');
     
     console.log('🔍 Debug - Dados no localStorage:');
     console.log('Filhos salvos:', filhosSalvos);
@@ -111,18 +242,37 @@ function carregarDados() {
         ];
     }
     
-    if (historicoSalvo) {
-        historico = JSON.parse(historicoSalvo);
+    // Sincronizar pontos dos filhos com dados do servidor
+    if (Object.keys(pontos).length > 0) {
+        filhos.forEach(filho => {
+            if (pontos[filho.nome] !== undefined) {
+                filho.pontos = pontos[filho.nome];
+            }
+        });
     }
 }
 
 // Salvar dados
-function salvarDados() {
+async function salvarDados() {
+    // Salvar no localStorage (backup local)
     localStorage.setItem('filhos', JSON.stringify(filhos));
     localStorage.setItem('atividadesPositivas', JSON.stringify(atividadesPositivas));
     localStorage.setItem('atividadesNegativas', JSON.stringify(atividadesNegativas));
     localStorage.setItem('historico', JSON.stringify(historico));
     console.log('💾 Dados salvos no localStorage');
+    
+    // Atualizar pontos baseado nos filhos
+    filhos.forEach(filho => {
+        pontos[filho.nome] = filho.pontos || 0;
+    });
+    
+    // Tentar salvar no servidor
+    const salvouServidor = await salvarNoServidor();
+    if (salvouServidor) {
+        console.log('☁️ Dados sincronizados com o servidor');
+    } else {
+        console.log('⚠️ Dados salvos apenas localmente');
+    }
 }
 
 // Atualizar tela quando necessário
@@ -956,7 +1106,7 @@ async function handleAdicionarPontos(e) {
             
             // Atualizar interface
             atualizarInterface();
-            salvarDados();
+            await salvarDados();
             
             mostrarNotificacao(`✅ +${atividade.pontos} pontos para ${filho.nome}!`, 'success');
         } else {
@@ -1024,7 +1174,7 @@ async function handleRemoverPontos(e) {
             
             // Atualizar interface
             atualizarInterface();
-            salvarDados();
+            await salvarDados();
             
             mostrarNotificacao(`✅ -${atividade.pontos} pontos para ${filho.nome}!`, 'success');
         } else {
