@@ -218,29 +218,45 @@ const verificarAutenticacao = (requiredPermission = null) => {
 
 // Rota de login
 app.post('/api/login', (req, res) => {
+    console.log('🔐 Tentativa de login recebida:', req.body);
+    
     const { type, nome, senha } = req.body;
 
     try {
         let isValid = false;
         let permissions = [];
 
+        console.log('🔍 Verificando credenciais para tipo:', type);
+        console.log('🔑 Senha recebida:', senha);
+        console.log('🔑 Senhas configuradas:', {
+            familia: AUTH_CONFIG.pai.senhaFamilia,
+            admin: AUTH_CONFIG.admin.senhaAdmin
+        });
+
         switch (type) {
             case 'pai':
+                console.log('👨‍👩‍👧‍👦 Verificando login de pai...');
                 isValid = senha === AUTH_CONFIG.pai.senhaFamilia;
                 permissions = ['view', 'add_points', 'remove_points'];
+                console.log('✅ Senha pai válida?', isValid);
                 break;
             
             case 'admin':
+                console.log('🔧 Verificando login de admin...');
+                console.log('🔍 Comparando:', `"${senha}" === "${AUTH_CONFIG.admin.senhaAdmin}"`);
                 isValid = senha === AUTH_CONFIG.admin.senhaAdmin;
                 permissions = ['view', 'add_points', 'remove_points', 'manage_children', 'manage_activities', 'view_history', 'export_data'];
+                console.log('✅ Senha admin válida?', isValid);
                 break;
             
             case 'guest':
+                console.log('👀 Login de visitante (sempre válido)');
                 isValid = true;
                 permissions = ['view'];
                 break;
             
             default:
+                console.log('❌ Tipo de usuário inválido:', type);
                 return res.status(400).json({
                     success: false,
                     message: 'Tipo de usuário inválido'
