@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
+const JSONBinStorage = require('./storage/JSONBinStorage');
 require('dotenv').config();
 
 const app = express();
@@ -12,7 +13,10 @@ const PORT = process.env.PORT || 3000;
 // Importar models
 const { Pontos, Historico } = require('./models/Pontos');
 
-// Conectar ao MongoDB
+// Inicializar JSONBin Storage
+const jsonBinStorage = new JSONBinStorage();
+
+// Conectar ao MongoDB (fallback)
 const connectDB = async () => {
     try {
         const mongoURI = process.env.MONGODB_URI || 'mongodb://localhost:27017/tabela-pontos';
@@ -20,8 +24,7 @@ const connectDB = async () => {
         console.log('🗄️ MongoDB conectado com sucesso');
     } catch (error) {
         console.error('❌ Erro ao conectar MongoDB:', error.message);
-        // Continuar com arquivos locais se MongoDB não disponível
-        console.log('📁 Usando armazenamento local como fallback');
+        console.log('🌐 Usando JSONBin como armazenamento principal');
     }
 };
 
@@ -68,21 +71,32 @@ app.use(express.static('public'));
 // Rotas da API
 app.get('/api/pontos', async (req, res) => {
     try {
-        // Tentar MongoDB primeiro
+        // Tentar JSONBin primeiro (mais confiável)
+        const pontosJSONBin = await jsonBinStorage.carregarPontos();
+        if (pontosJSONBin && Object.keys(pontosJSONBin).length > 0) {
+            console.log('🌐 Pontos carregados do JSONBin:', pontosJSONBin);
+            res.json(pontosJSONBin);
+            return;
+        }
+
+        // Tentar MongoDB segundo
         if (mongoose.connection.readyState === 1) {
             const pontosDB = await Pontos.find({});
             const pontosObj = {};
             pontosDB.forEach(p => {
                 pontosObj[p.nome.toLowerCase()] = p.pontos;
             });
-            console.log('📊 Pontos carregados do MongoDB:', pontosObj);
-            res.json(pontosObj);
-        } else {
-            // Fallback para arquivo local
-            console.log('📁 Usando arquivo local como fallback');
-            const pontos = lerDados(PONTOS_FILE);
-            res.json(pontos);
+            if (Object.keys(pontosObj).length > 0) {
+                console.log('📊 Pontos carregados do MongoDB:', pontosObj);
+                res.json(pontosObj);
+                return;
+            }
         }
+
+        // Fallback para arquivo local
+        console.log('📁 Usando arquivo local como último recurso');
+        const pontos = lerDados(PONTOS_FILE);
+        res.json(pontos);
     } catch (error) {
         console.error('❌ Erro ao obter pontos:', error);
         // Fallback para arquivo local em caso de erro
@@ -268,8 +282,11 @@ app.post('/api/pontos', async (req, res) => {
     try {
         const pontosData = req.body;
         
+        // Salvar no JSONBin primeiro
+        const sucessoJSONBin = await jsonBinStorage.salvarPontos(pontosData);
+        
+        // Tentar salvar no MongoDB também (backup)
         if (mongoose.connection.readyState === 1) {
-            // Salvar cada filho no MongoDB
             for (const [nome, pontos] of Object.entries(pontosData)) {
                 await Pontos.findOneAndUpdate(
                     { nome: nome.toLowerCase() },
@@ -281,12 +298,17 @@ app.post('/api/pontos', async (req, res) => {
                     { upsert: true }
                 );
             }
-            console.log('💾 Pontos salvos no MongoDB:', pontosData);
+            console.log('💾 Pontos salvos no MongoDB (backup):', pontosData);
+        }
+        
+        // Salvar arquivo local também (backup)
+        salvarDados(PONTOS_FILE, pontosData);
+        
+        if (sucessoJSONBin) {
+            console.log('🌐 Pontos salvos no JSONBin:', pontosData);
             res.json({ success: true, message: 'Pontos salvos com sucesso!' });
         } else {
-            // Fallback para arquivo local
-            const sucesso = salvarDados(PONTOS_FILE, pontosData);
-            res.json({ success: sucesso, message: sucesso ? 'Pontos salvos localmente!' : 'Erro ao salvar' });
+            res.json({ success: true, message: 'Pontos salvos localmente!' });
         }
     } catch (error) {
         console.error('❌ Erro ao salvar pontos:', error);
