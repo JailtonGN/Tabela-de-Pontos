@@ -15,7 +15,7 @@ class LoginSystem {
         // Seções de login
         this.loginPai = document.getElementById('login-pai');
         this.loginAdmin = document.getElementById('login-admin');
-        this.loginGuest = document.getElementById('login-guest');
+        this.loginGuestForm = document.getElementById('login-guest');
 
         // Campos de input
         this.nomePai = document.getElementById('nome-pai');
@@ -35,9 +35,33 @@ class LoginSystem {
         });
 
         // Botões de login
-        this.btnLoginPai.addEventListener('click', () => this.loginPai());
-        this.btnLoginAdmin.addEventListener('click', () => this.loginAdmin());
-        this.btnLoginGuest.addEventListener('click', () => this.loginGuest());
+        this.btnLoginPai.addEventListener('click', () => {
+            console.log('🔍 Clique em login pai');
+            this.loginPai();
+        });
+        this.btnLoginAdmin.addEventListener('click', () => {
+            console.log('🔍 Clique em login admin');
+            this.loginAdmin();
+        });
+        this.btnLoginGuest.addEventListener('click', () => {
+            console.log('🔍 Clique em login guest');
+            console.log('🔍 Função loginGuest existe?', typeof this.loginGuest);
+            if (typeof this.loginGuest === 'function') {
+                this.loginGuest();
+            } else {
+                console.error('❌ loginGuest não é uma função!');
+                // Fallback direto
+                this.setLoading(this.btnLoginGuest, true);
+                setTimeout(() => {
+                    this.saveSession({
+                        type: 'guest',
+                        nome: 'Visitante',
+                        permissions: ['view']
+                    });
+                    this.redirectToApp();
+                }, 500);
+            }
+        });
 
         // Enter nos campos de senha
         this.senhaPai.addEventListener('keypress', (e) => {
