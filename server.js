@@ -24,13 +24,25 @@ const { Pontos, Historico } = require('./models/Pontos');
 // Conectar ao MongoDB Atlas
 const connectDB = async () => {
     try {
-        const mongoURI = 'mongodb+srv://tabela-pontos:TabelaPontos2025!@cluster0.nblesgu.mongodb.net/tabela-pontos?retryWrites=true&w=majority&appName=Cluster0';
-        await mongoose.connect(mongoURI);
+        // Usar variável de ambiente se disponível, senão usar URI hardcoded
+        const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://tabela-pontos:TabelaPontos2025!@cluster0.nblesgu.mongodb.net/tabela-pontos?retryWrites=true&w=majority&appName=Cluster0&authSource=admin';
+        
+        await mongoose.connect(mongoURI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+            serverSelectionTimeoutMS: 5000, // Timeout de 5 segundos
+            socketTimeoutMS: 45000, // Timeout de socket de 45 segundos
+            maxPoolSize: 10, // Máximo 10 conexões simultâneas
+            bufferCommands: false, // Não aguardar conexão para comandos
+            bufferMaxEntries: 0, // Não fazer buffer de operações
+        });
+        
         console.log('🗄️ MongoDB Atlas conectado com sucesso!');
         console.log('🌐 Cluster:', mongoURI.split('@')[1].split('/')[0]);
     } catch (error) {
         console.error('❌ Erro ao conectar MongoDB:', error.message);
-        console.log('📁 Usando apenas armazenamento local');
+        console.log('💡 Dica: Configure IP 0.0.0.0/0 no MongoDB Atlas para aceitar qualquer IP');
+        console.log('📁 Sistema funcionará apenas com armazenamento local');
     }
 };
 
@@ -144,7 +156,7 @@ async function salvarHistorico(dadosLog) {
         }
 
         // Backup local
-        const historicoLocal = lerDados(HISTORICO_FILE);
+        let historicoLocal = lerDados(HISTORICO_FILE);
         const novoRegistroLocal = {
             id: historicoLocal.length ? Math.max(...historicoLocal.map(h => h.id || 0)) + 1 : 1,
             nome: dadosLog.usuario,
