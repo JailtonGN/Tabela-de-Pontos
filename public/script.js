@@ -2,6 +2,8 @@
 
 // Verificação de autenticação ao carregar a página
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Aplicação carregando...');
+    
     // Verificar se AuthUtils está disponível
     if (typeof AuthUtils === 'undefined') {
         console.error('❌ AuthUtils não carregado, redirecionando para login...');
@@ -9,8 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    console.log('✅ AuthUtils carregado');
+    
     // Verificar se usuário está logado
-    if (!AuthUtils.isLoggedIn()) {
+    const isLoggedIn = AuthUtils.isLoggedIn();
+    console.log('🔐 Status de autenticação:', isLoggedIn);
+    
+    if (!isLoggedIn) {
         console.log('🔐 Usuário não autenticado, redirecionando para login...');
         window.location.href = '/login.html';
         return;
@@ -18,7 +25,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Obter dados do usuário
     const currentUser = AuthUtils.getCurrentUser();
-    console.log('👤 Usuário logado:', currentUser.nome, '- Tipo:', currentUser.type);
+    console.log('👤 Usuário logado:', currentUser);
+
+    if (!currentUser) {
+        console.error('❌ Dados do usuário inválidos, redirecionando para login...');
+        window.location.href = '/login.html';
+        return;
+    }
+
+    console.log('👤 Tipo de usuário:', currentUser.type);
+    console.log('🔑 Permissões:', currentUser.permissions);
 
     // Configurar interface baseado nas permissões
     configurarInterfacePorPermissao(currentUser);

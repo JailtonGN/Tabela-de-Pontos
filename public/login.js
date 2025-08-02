@@ -146,17 +146,49 @@ class LoginSystem {
         }
     }
 
-    loginGuest() {
+    async loginGuest() {
         this.setLoading(this.btnLoginGuest, true);
         
-        setTimeout(() => {
+        try {
+            const response = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'guest'
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                this.saveSession({
+                    type: 'guest',
+                    nome: 'Visitante',
+                    permissions: ['view']
+                });
+                this.redirectToApp();
+            } else {
+                console.error('Erro no login de visitante:', result.message);
+                // Fallback: login local
+                this.saveSession({
+                    type: 'guest',
+                    nome: 'Visitante',
+                    permissions: ['view']
+                });
+                this.redirectToApp();
+            }
+        } catch (error) {
+            console.error('Erro na conexão do visitante:', error);
+            // Fallback: login local
             this.saveSession({
                 type: 'guest',
                 nome: 'Visitante',
                 permissions: ['view']
             });
             this.redirectToApp();
-        }, 500);
+        } finally {
+            this.setLoading(this.btnLoginGuest, false);
+        }
     }
 
     saveSession(userData) {
@@ -185,7 +217,9 @@ class LoginSystem {
     }
 
     redirectToApp() {
-        window.location.href = '/';
+        console.log('🔄 Redirecionando para a aplicação...');
+        // Forçar redirecionamento
+        window.location.replace('/');
     }
 
     showError(element, message) {
