@@ -245,6 +245,13 @@ app.get('/login', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
+// Rota principal - redirecionar para login se não autenticado
+app.get('/', (req, res) => {
+    // Por padrão, servir o index.html
+    // A verificação de autenticação será feita no lado cliente
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // Rotas da API
 app.get('/api/pontos', async (req, res) => {
     try {

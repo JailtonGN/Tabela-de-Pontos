@@ -2,8 +2,16 @@
 
 // Verificação de autenticação ao carregar a página
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se AuthUtils está disponível
+    if (typeof AuthUtils === 'undefined') {
+        console.error('❌ AuthUtils não carregado, redirecionando para login...');
+        window.location.href = '/login.html';
+        return;
+    }
+    
     // Verificar se usuário está logado
-    if (!AuthUtils || !AuthUtils.isLoggedIn()) {
+    if (!AuthUtils.isLoggedIn()) {
+        console.log('🔐 Usuário não autenticado, redirecionando para login...');
         window.location.href = '/login.html';
         return;
     }
