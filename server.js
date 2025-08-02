@@ -198,8 +198,6 @@ async function salvarHistorico(dadosLog) {
         console.error('❌ Erro ao salvar histórico:', error);
     }
 }
-    }
-}
 
 // Middleware
 app.use(cors());
