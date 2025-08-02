@@ -1,5 +1,97 @@
 // Sistema de Pontos - JavaScript Simples e Funcional
 
+// Verificação de autenticação ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se usuário está logado
+    if (!AuthUtils || !AuthUtils.isLoggedIn()) {
+        window.location.href = '/login.html';
+        return;
+    }
+
+    // Obter dados do usuário
+    const currentUser = AuthUtils.getCurrentUser();
+    console.log('👤 Usuário logado:', currentUser.nome, '- Tipo:', currentUser.type);
+
+    // Configurar interface baseado nas permissões
+    configurarInterfacePorPermissao(currentUser);
+
+    // Inicializar aplicação
+    inicializarApp();
+});
+
+// Configurar interface baseado no tipo de usuário
+function configurarInterfacePorPermissao(user) {
+    const { type, permissions } = user;
+
+    // Mostrar informações do usuário no cabeçalho
+    const headerTitle = document.querySelector('.header-title p');
+    if (headerTitle) {
+        const tipoTexto = type === 'admin' ? '🔧 Administrador' : 
+                         type === 'pai' ? `👨‍👩‍👧‍👦 ${user.nome}` : 
+                         '👀 Visualização';
+        headerTitle.innerHTML = `${tipoTexto} - Gerenciando os pontos dos filhos`;
+    }
+
+    // Adicionar botão de logout
+    const headerControls = document.querySelector('.header-controls');
+    if (headerControls) {
+        const logoutBtn = document.createElement('button');
+        logoutBtn.className = 'btn-logout';
+        logoutBtn.innerHTML = '🚪 Sair';
+        logoutBtn.title = 'Fazer logout';
+        logoutBtn.onclick = () => AuthUtils.logout();
+        headerControls.appendChild(logoutBtn);
+    }
+
+    // Configurar visibilidade dos elementos baseado nas permissões
+    if (!permissions.includes('add_points')) {
+        // Esconder seção de adicionar pontos
+        const addSection = document.querySelector('.acao-card:has(#filho-adicionar)');
+        if (addSection) addSection.style.display = 'none';
+    }
+
+    if (!permissions.includes('remove_points')) {
+        // Esconder seção de remover pontos
+        const removeSection = document.querySelector('.acao-card:has(#filho-remover)');
+        if (removeSection) removeSection.style.display = 'none';
+    }
+
+    if (!permissions.includes('manage_children') || !permissions.includes('manage_activities')) {
+        // Esconder ou desabilitar botão de configurações
+        const configBtn = document.getElementById('btn-configuracoes');
+        if (configBtn) {
+            if (type === 'guest') {
+                configBtn.style.display = 'none';
+            } else {
+                // Pais podem ver configurações mas com limitações
+                configBtn.title = 'Configurações (Limitadas)';
+            }
+        }
+    }
+
+    // Para visitantes, mostrar apenas a visualização
+    if (type === 'guest') {
+        document.querySelectorAll('.acao-card').forEach(card => {
+            card.style.display = 'none';
+        });
+        
+        // Adicionar aviso para visitantes
+        const mainContent = document.querySelector('.main-content');
+        const avisoDiv = document.createElement('div');
+        avisoDiv.className = 'aviso-visitante';
+        avisoDiv.innerHTML = `
+            <div class="card">
+                <h3>👀 Modo Visitante</h3>
+                <p>Você está no modo de visualização. Para adicionar ou remover pontos, faça login como pai/mãe ou administrador.</p>
+                <button onclick="window.location.href='/login.html'" class="btn-login-redirect">
+                    🔐 Fazer Login
+                </button>
+            </div>
+        `;
+        mainContent.insertBefore(avisoDiv, mainContent.firstChild);
+    }
+}
+
 // Estado global
 let filhos = []; // Array dinâmico de filhos
 let atividadesPositivas = []; // Atividades que ganham pontos
@@ -151,12 +243,23 @@ const coresDisponiveis = [
     { nome: 'Ciano', valor: '#74b9ff', gradiente: 'linear-gradient(135deg, #74b9ff 0%, #0984e3 100%)' }
 ];
 
-// Inicialização
+// Função para inicializar a aplicação (chamada após verificação de autenticação)
+async function inicializarApp() {
+    console.log('🚀 Inicializando aplicação...');
+    await carregarDados();
+    configurarEventos();
+    atualizarTela();
+}
+
+// Inicialização original (será removida pela nova estrutura de autenticação)
+// Inicialização original (desativada - agora controlada por autenticação)
+/*
 document.addEventListener('DOMContentLoaded', async function() {
     await carregarDados();
     configurarEventos();
     atualizarTela();
 });
+*/
 
 // Carregar dados salvos
 async function carregarDados() {

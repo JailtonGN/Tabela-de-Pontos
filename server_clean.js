@@ -4,18 +4,9 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const fs = require('fs');
 const mongoose = require('mongoose');
-const http = require('http');
-const { Server } = require('socket.io');
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
-});
 const PORT = process.env.PORT || 3000;
 
 // Importar models
@@ -35,58 +26,6 @@ const connectDB = async () => {
 };
 
 connectDB();
-
-// WebSocket para sincronização em tempo real
-io.on('connection', (socket) => {
-    console.log('📱 Cliente conectado:', socket.id);
-    
-    // Quando um cliente se conecta, enviar dados atuais
-    socket.on('solicitar-dados', async () => {
-        try {
-            const pontos = await obterPontosAtuais();
-            socket.emit('dados-atuais', pontos);
-        } catch (error) {
-            console.error('❌ Erro ao enviar dados atuais:', error);
-        }
-    });
-    
-    // Escutar mudanças de pontos
-    socket.on('pontos-alterados', (dados) => {
-        console.log('🔄 Sincronizando alteração:', dados);
-        // Enviar para todos os outros clientes conectados
-        socket.broadcast.emit('atualizar-pontos', dados);
-    });
-    
-    // Escutar mudanças no histórico
-    socket.on('historico-alterado', (dados) => {
-        console.log('📋 Sincronizando histórico:', dados);
-        // Enviar para todos os outros clientes conectados
-        socket.broadcast.emit('atualizar-historico', dados);
-    });
-    
-    socket.on('disconnect', () => {
-        console.log('👋 Cliente desconectado:', socket.id);
-    });
-});
-
-// Função auxiliar para obter pontos atuais
-async function obterPontosAtuais() {
-    try {
-        if (mongoose.connection.readyState === 1) {
-            const pontosDB = await Pontos.find({});
-            const pontosObj = {};
-            pontosDB.forEach(p => {
-                pontosObj[p.nome.toLowerCase()] = p.pontos;
-            });
-            return pontosObj;
-        } else {
-            return lerDados(PONTOS_FILE);
-        }
-    } catch (error) {
-        console.error('❌ Erro ao obter pontos:', error);
-        return {};
-    }
-}
 
 // Arquivos de dados locais (backup)
 const PONTOS_FILE = 'data/pontos.json';
@@ -126,124 +65,6 @@ function salvarDados(arquivo, dados) {
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.static('public'));
-
-// Configurações de autenticação
-const AUTH_CONFIG = {
-    pai: {
-        senhaFamilia: 'familia123' // Senha simples para os pais
-    },
-    admin: {
-        senhaAdmin: 'admin2025!' // Senha especial para administrador
-    }
-};
-
-// Middleware de autenticação para rotas protegidas
-const verificarAutenticacao = (requiredPermission = null) => {
-    return (req, res, next) => {
-        const authHeader = req.headers.authorization;
-        
-        if (!authHeader) {
-            return res.status(401).json({ 
-                success: false, 
-                message: 'Token de autenticação necessário' 
-            });
-        }
-
-        try {
-            // Verificar token de sessão (pode ser implementado JWT no futuro)
-            const sessionData = JSON.parse(authHeader.replace('Bearer ', ''));
-            
-            if (requiredPermission && !sessionData.permissions.includes(requiredPermission)) {
-                return res.status(403).json({
-                    success: false,
-                    message: 'Permissão insuficiente'
-                });
-            }
-
-            req.user = sessionData;
-            next();
-        } catch (error) {
-            return res.status(401).json({
-                success: false,
-                message: 'Token inválido'
-            });
-        }
-    };
-};
-
-// Rota de login
-app.post('/api/login', (req, res) => {
-    const { type, nome, senha } = req.body;
-
-    try {
-        let isValid = false;
-        let permissions = [];
-
-        switch (type) {
-            case 'pai':
-                isValid = senha === AUTH_CONFIG.pai.senhaFamilia;
-                permissions = ['view', 'add_points', 'remove_points'];
-                break;
-            
-            case 'admin':
-                isValid = senha === AUTH_CONFIG.admin.senhaAdmin;
-                permissions = ['view', 'add_points', 'remove_points', 'manage_children', 'manage_activities', 'view_history', 'export_data'];
-                break;
-            
-            case 'guest':
-                isValid = true;
-                permissions = ['view'];
-                break;
-            
-            default:
-                return res.status(400).json({
-                    success: false,
-                    message: 'Tipo de usuário inválido'
-                });
-        }
-
-        if (isValid) {
-            // Log do login
-            const loginData = {
-                tipo: 'LOGIN',
-                usuario: nome || type,
-                tipoUsuario: type,
-                permissions: permissions,
-                timestamp: new Date().toISOString(),
-                ip: req.ip || req.connection.remoteAddress
-            };
-
-            // Salvar log no histórico
-            salvarHistorico(loginData);
-
-            res.json({
-                success: true,
-                message: 'Login realizado com sucesso',
-                user: {
-                    nome: nome || (type === 'admin' ? 'Administrador' : 'Visitante'),
-                    type: type,
-                    permissions: permissions
-                }
-            });
-        } else {
-            res.status(401).json({
-                success: false,
-                message: type === 'pai' ? 'Senha da família incorreta' : 'Senha de administrador incorreta'
-            });
-        }
-    } catch (error) {
-        console.error('❌ Erro no login:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Erro interno do servidor'
-        });
-    }
-});
-
-// Rota para servir a página de login
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
 
 // Rotas da API
 app.get('/api/pontos', async (req, res) => {
@@ -348,20 +169,6 @@ app.post('/api/pontos/adicionar', async (req, res) => {
         historicoAtual.unshift(novoRegistroLocal);
         salvarDados(HISTORICO_FILE, historicoAtual);
 
-        // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
-        const dadosParaSincronizar = {
-            tipo: 'adicionar',
-            nome: nomeKey,
-            pontos: pontos,
-            atividade: atividade,
-            novoTotal: pontosAtuais[nomeKey],
-            timestamp: new Date().toISOString()
-        };
-        
-        // Notificar todos os clientes conectados
-        io.emit('atualizar-pontos', dadosParaSincronizar);
-        console.log('🔄 Sincronização enviada para todos os dispositivos');
-
         res.json({ success: true, novoTotal: pontosAtuais[nomeKey] });
     } catch (error) {
         console.error('❌ Erro ao adicionar pontos:', error);
@@ -432,20 +239,6 @@ app.post('/api/pontos/remover', async (req, res) => {
         };
         historicoAtual.unshift(novoRegistroLocal);
         salvarDados(HISTORICO_FILE, historicoAtual);
-
-        // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
-        const dadosParaSincronizar = {
-            tipo: 'remover',
-            nome: nomeKey,
-            pontos: pontos,
-            motivo: motivo,
-            novoTotal: pontosAtuais[nomeKey],
-            timestamp: new Date().toISOString()
-        };
-        
-        // Notificar todos os clientes conectados
-        io.emit('atualizar-pontos', dadosParaSincronizar);
-        console.log('🔄 Sincronização enviada para todos os dispositivos');
 
         res.json({ success: true, novoTotal: pontosAtuais[nomeKey] });
     } catch (error) {
@@ -552,9 +345,8 @@ app.get('/', (req, res) => {
 });
 
 // Iniciar servidor
-server.listen(PORT, () => {
+app.listen(PORT, () => {
     console.log('🚀 Servidor rodando na porta', PORT);
     console.log('📱 Acesse: http://localhost:' + PORT);
     console.log('💾 Armazenamento: MongoDB Atlas + Local Files');
-    console.log('🔄 WebSocket: Sincronização em tempo real ativada!');
 });

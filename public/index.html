@@ -16,9 +16,15 @@
                     <h1>🏆 Sistema de Pontos</h1>
                     <p>Gerenciando os pontos dos meus filhos</p>
                 </div>
-                <button id="btn-configuracoes" class="btn-config" title="Configurações">
-                    ⚙️
-                </button>
+                <div class="header-controls">
+                    <!-- Status WebSocket -->
+                    <div id="websocket-status" class="websocket-status disconnected">
+                        🔄 Conectando...
+                    </div>
+                    <button id="btn-configuracoes" class="btn-config" title="Configurações">
+                        ⚙️
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -276,8 +282,54 @@
     <!-- Container de Notificações -->
     <div class="toast-container" id="toast-container"></div>
 
+    <!-- Socket.IO Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- WebSocket Sync -->
+    <script src="websocket-sync.js"></script>
+
     <!-- Módulo de Notificações Centralizado -->
     <script src="utils/toast-utils.js"></script>
+    
+    <!-- Sistema de Autenticação -->
+    <script>
+        // Definir AuthUtils antes de carregar outros scripts
+        window.AuthUtils = {
+            isLoggedIn() {
+                const session = localStorage.getItem('userSession');
+                if (!session) return false;
+                
+                const userData = JSON.parse(session);
+                const now = new Date();
+                const expires = new Date(userData.expires);
+                
+                return now < expires;
+            },
+
+            getCurrentUser() {
+                if (!this.isLoggedIn()) return null;
+                return JSON.parse(localStorage.getItem('userSession'));
+            },
+
+            hasPermission(permission) {
+                const user = this.getCurrentUser();
+                return user && user.permissions.includes(permission);
+            },
+
+            logout() {
+                localStorage.removeItem('userSession');
+                window.location.href = '/login.html';
+            },
+
+            requireAuth() {
+                if (!this.isLoggedIn()) {
+                    window.location.href = '/login.html';
+                    return false;
+                }
+                return true;
+            }
+        };
+    </script>
     
     <!-- Scripts Principais -->
     <script src="script.js"></script>

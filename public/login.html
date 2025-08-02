@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔐 Login - Sistema de Pontos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="login-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🏆 Sistema de Pontos</h1>
+                <p>Faça login para gerenciar os pontos</p>
+            </div>
+
+            <div class="login-form">
+                <div class="user-type-selector">
+                    <button id="btn-pai" class="user-type-btn active" data-type="pai">
+                        👨‍👩‍👧‍👦 Pai/Mãe
+                    </button>
+                    <button id="btn-admin" class="user-type-btn" data-type="admin">
+                        🔧 Administrador
+                    </button>
+                    <button id="btn-guest" class="user-type-btn" data-type="guest">
+                        👀 Apenas Visualizar
+                    </button>
+                </div>
+
+                <div id="login-pai" class="login-section active">
+                    <h3>Login dos Pais</h3>
+                    <div class="form-group">
+                        <label for="nome-pai">Nome:</label>
+                        <input type="text" id="nome-pai" class="form-control" placeholder="Digite seu nome">
+                    </div>
+                    <div class="form-group">
+                        <label for="senha-pai">Senha da Família:</label>
+                        <input type="password" id="senha-pai" class="form-control" placeholder="Senha simples">
+                    </div>
+                    <button id="btn-login-pai" class="btn-login">
+                        🚀 Entrar como Pai/Mãe
+                    </button>
+                </div>
+
+                <div id="login-admin" class="login-section">
+                    <h3>Login do Administrador</h3>
+                    <div class="form-group">
+                        <label for="senha-admin">Senha de Administrador:</label>
+                        <input type="password" id="senha-admin" class="form-control" placeholder="Senha especial para configurações">
+                    </div>
+                    <button id="btn-login-admin" class="btn-login">
+                        🔧 Entrar como Admin
+                    </button>
+                </div>
+
+                <div id="login-guest" class="login-section">
+                    <h3>Acesso Livre</h3>
+                    <p>👥 Visualização apenas - ideal para as crianças verem seus pontos</p>
+                    <button id="btn-login-guest" class="btn-login">
+                        👀 Entrar como Visitante
+                    </button>
+                </div>
+            </div>
+
+            <div class="login-footer">
+                <p>🎯 <strong>Pai/Mãe:</strong> Adiciona e remove pontos</p>
+                <p>🔧 <strong>Admin:</strong> Acesso total às configurações</p>
+                <p>👀 <strong>Visitante:</strong> Apenas visualização</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="login.js"></script>
+</body>
+</html>
