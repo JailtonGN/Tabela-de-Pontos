@@ -1487,3 +1487,66 @@ body {
         order: 1;
     }
 }
+
+/* ================================
+   🔄 Estilos de WebSocket Status
+   ================================ */
+
+.websocket-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.8em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    cursor: help;
+    margin-right: 10px;
+}
+
+.websocket-status.connected {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.websocket-status.disconnected {
+    background: rgba(255, 152, 0, 0.2);
+    color: #FF9800;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    animation: pulse 2s infinite;
+}
+
+.websocket-status.error {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* Header controls layout */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Responsivo para WebSocket status */
+@media (max-width: 768px) {
+    .websocket-status {
+        font-size: 0.7em;
+        padding: 3px 8px;
+        margin-right: 5px;
+    }
+    
+    .header-controls {
+        gap: 5px;
+    }
+}

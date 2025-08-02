@@ -1225,6 +1225,9 @@ async function handleAdicionarPontos(e) {
                 tipo: 'positiva'
             });
             
+            // Notificar outros dispositivos via WebSocket
+            notificarAlteracaoWebSocket('adicionar', filho.nome, atividade.pontos, atividade.nome);
+            
             // Limpar formulário
             atividadeSelect.value = '';
             
@@ -1292,6 +1295,9 @@ async function handleRemoverPontos(e) {
                 pontos_depois: filho.pontos,
                 tipo: 'negativa'
             });
+            
+            // Notificar outros dispositivos via WebSocket
+            notificarAlteracaoWebSocket('remover', filho.nome, atividade.pontos, atividade.nome);
             
             // Limpar formulário
             atividadeSelect.value = '';
@@ -2902,7 +2908,127 @@ function resetarPontos() {
     mostrarNotificacao(`🔄 Pontos resetados para ${filhos.length} crianças!`, 'success');
 }
 
-// Atualizar função de inicialização para carregar logs
+// ================================
+// Sistema de Sincronização WebSocket
+// ================================
+
+let socket = null;
+
+// Inicializar WebSocket quando a aplicação carregar
+function inicializarWebSocket() {
+    if (typeof io === 'undefined') {
+        console.log('⚠️ Socket.IO não disponível, sincronização desabilitada');
+        atualizarStatusWebSocket('error');
+        return;
+    }
+
+    try {
+        socket = io();
+        
+        socket.on('connect', () => {
+            console.log('🔄 WebSocket conectado');
+            atualizarStatusWebSocket('connected');
+            mostrarNotificacao('🔄 Sincronização ativada!', 'success');
+        });
+        
+        socket.on('disconnect', () => {
+            console.log('❌ WebSocket desconectado');
+            atualizarStatusWebSocket('disconnected');
+        });
+        
+        socket.on('connect_error', () => {
+            console.log('❌ Erro de conexão WebSocket');
+            atualizarStatusWebSocket('error');
+        });
+        
+        // Escutar atualizações de outros dispositivos
+        socket.on('atualizar-pontos', (dados) => {
+            console.log('📡 Atualização recebida de outro dispositivo:', dados);
+            sincronizarDadosRecebidos(dados);
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao inicializar WebSocket:', error);
+        atualizarStatusWebSocket('error');
+    }
+}
+
+// Atualizar status visual do WebSocket
+function atualizarStatusWebSocket(status) {
+    const statusElement = document.getElementById('websocket-status');
+    if (!statusElement) return;
+    
+    statusElement.className = `websocket-status ${status}`;
+    
+    switch (status) {
+        case 'connected':
+            statusElement.innerHTML = '🟢 Online';
+            statusElement.title = 'Sincronização em tempo real ativa';
+            break;
+        case 'disconnected':
+            statusElement.innerHTML = '🔴 Offline';
+            statusElement.title = 'Sincronização temporariamente indisponível';
+            break;
+        case 'error':
+            statusElement.innerHTML = '⚠️ Erro';
+            statusElement.title = 'Erro na sincronização - dados salvos localmente';
+            break;
+        default:
+            statusElement.innerHTML = '🔄 Conectando...';
+    }
+}
+
+// Sincronizar dados recebidos de outros dispositivos
+function sincronizarDadosRecebidos(dados) {
+    try {
+        // Recarregar dados completos para garantir sincronia
+        carregarDados();
+        
+        // Mostrar notificação da alteração
+        const emoji = dados.tipo === 'adicionar' ? '➕' : '➖';
+        const acao = dados.tipo === 'adicionar' ? 'ganhou' : 'perdeu';
+        const nome = dados.nome?.toUpperCase() || 'Criança';
+        const pontos = dados.pontos || 0;
+        const motivo = dados.atividade || dados.motivo || '';
+        
+        const mensagem = `${emoji} ${nome} ${acao} ${pontos} pontos`;
+        mostrarNotificacao(mensagem + (motivo ? `\n📝 ${motivo}` : ''), 'info');
+        
+        // Vibração se suportado
+        if (navigator.vibrate) {
+            navigator.vibrate([100, 50, 100]);
+        }
+        
+        // Atualizar interface
+        setTimeout(() => atualizarInterface(), 500);
+        
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar dados recebidos:', error);
+    }
+}
+
+// Notificar outros dispositivos sobre alterações locais
+function notificarAlteracaoWebSocket(tipo, nome, pontos, atividade) {
+    if (socket && socket.connected) {
+        const dados = {
+            tipo: tipo,
+            nome: nome,
+            pontos: pontos,
+            atividade: atividade,
+            timestamp: new Date().toISOString()
+        };
+        
+        socket.emit('pontos-alterados', dados);
+        console.log('📡 Notificação enviada para outros dispositivos:', dados);
+    }
+}
+
+// Atualizar função de inicialização para incluir WebSocket
 document.addEventListener('DOMContentLoaded', function() {
     carregarLogs();
+    
+    // Inicializar WebSocket após um pequeno delay
+    setTimeout(() => {
+        inicializarWebSocket();
+    }, 1000);
 }); 

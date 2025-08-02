@@ -433,17 +433,14 @@ app.post('/api/pontos/adicionar', async (req, res) => {
         pontosAtuais[nomeKey] = (pontosAtuais[nomeKey] || 0) + pontos;
         salvarDados(PONTOS_FILE, pontosAtuais);
 
-        const historicoAtual = lerDados(HISTORICO_FILE);
-        const novoRegistroLocal = {
-            id: historicoAtual.length ? Math.max(...historicoAtual.map(h => h.id)) + 1 : 1,
+        // Salvar no histórico usando a função correta
+        await salvarHistorico({
             nome: nomeKey,
             pontos: pontos,
             motivo: atividade,
             tipo: 'adicionar',
-            data: new Date().toISOString()
-        };
-        historicoAtual.unshift(novoRegistroLocal);
-        salvarDados(HISTORICO_FILE, historicoAtual);
+            timestamp: new Date().toISOString()
+        });
 
         // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
         const dadosParaSincronizar = {
@@ -518,17 +515,14 @@ app.post('/api/pontos/remover', async (req, res) => {
         pontosAtuais[nomeKey] = Math.max(0, (pontosAtuais[nomeKey] || 0) - pontos);
         salvarDados(PONTOS_FILE, pontosAtuais);
 
-        const historicoAtual = lerDados(HISTORICO_FILE);
-        const novoRegistroLocal = {
-            id: historicoAtual.length ? Math.max(...historicoAtual.map(h => h.id)) + 1 : 1,
+        // Salvar no histórico usando a função correta
+        await salvarHistorico({
             nome: nomeKey,
             pontos: pontos,
             motivo: motivo,
             tipo: 'remover',
-            data: new Date().toISOString()
-        };
-        historicoAtual.unshift(novoRegistroLocal);
-        salvarDados(HISTORICO_FILE, historicoAtual);
+            timestamp: new Date().toISOString()
+        });
 
         // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
         const dadosParaSincronizar = {
