@@ -134,7 +134,27 @@ function salvarDados(arquivo, dados) {
     }
 }
 
-// Função para salvar no histórico (MongoDB + Local)
+// Função para salvar logs de sistema (separado do histórico de pontos)
+async function salvarLogSistema(dadosLog) {
+    try {
+        // Apenas log no console para sistema - não salvar no histórico de pontos
+        console.log('🔐 Log de Sistema:', {
+            tipo: dadosLog.tipo,
+            usuario: dadosLog.usuario,
+            tipoUsuario: dadosLog.tipoUsuario,
+            timestamp: dadosLog.timestamp,
+            ip: dadosLog.ip
+        });
+        
+        // Opcionalmente, poderia salvar em um arquivo separado de logs de sistema
+        // Mas não vamos misturar com o histórico de pontos das crianças
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar log de sistema:', error);
+    }
+}
+
+// Função para salvar no histórico (MongoDB + Local) - APENAS para pontos das crianças
 async function salvarHistorico(dadosLog) {
     try {
         // Salvar no MongoDB se disponível
@@ -144,26 +164,26 @@ async function salvarHistorico(dadosLog) {
 
             const novoLog = new Historico({
                 id: novoId,
-                nome: dadosLog.usuario,
-                pontos: 0,
-                motivo: `${dadosLog.tipo}: ${dadosLog.tipoUsuario}`,
-                tipo: 'sistema',
-                data: new Date(dadosLog.timestamp)
+                nome: dadosLog.nome,
+                pontos: dadosLog.pontos,
+                motivo: dadosLog.motivo,
+                tipo: dadosLog.tipo, // 'adicionar' ou 'remover'
+                data: new Date(dadosLog.data || dadosLog.timestamp)
             });
 
             await novoLog.save();
-            console.log('📝 Log salvo no MongoDB:', dadosLog.tipo);
+            console.log('📝 Histórico salvo no MongoDB:', dadosLog.tipo);
         }
 
         // Backup local
         let historicoLocal = lerDados(HISTORICO_FILE);
         const novoRegistroLocal = {
             id: historicoLocal.length ? Math.max(...historicoLocal.map(h => h.id || 0)) + 1 : 1,
-            nome: dadosLog.usuario,
-            pontos: 0,
-            motivo: `${dadosLog.tipo}: ${dadosLog.tipoUsuario}`,
-            tipo: 'sistema',
-            data: dadosLog.timestamp
+            nome: dadosLog.nome,
+            pontos: dadosLog.pontos,
+            motivo: dadosLog.motivo,
+            tipo: dadosLog.tipo,
+            data: dadosLog.data || dadosLog.timestamp
         };
         
         if (Array.isArray(historicoLocal)) {
@@ -173,9 +193,11 @@ async function salvarHistorico(dadosLog) {
         }
         
         salvarDados(HISTORICO_FILE, historicoLocal);
-        console.log('📝 Log salvo localmente');
+        console.log('📝 Histórico salvo localmente');
     } catch (error) {
-        console.error('❌ Erro ao salvar log:', error);
+        console.error('❌ Erro ao salvar histórico:', error);
+    }
+}
     }
 }
 
@@ -286,8 +308,8 @@ app.post('/api/login', (req, res) => {
                 ip: req.ip || req.connection.remoteAddress
             };
 
-            // Salvar log no histórico
-            salvarHistorico(loginData);
+            // Salvar log de sistema (não no histórico de pontos)
+            salvarLogSistema(loginData);
 
             res.json({
                 success: true,
@@ -602,6 +624,28 @@ app.post('/api/resetar-pontos', async (req, res) => {
         res.json({ success: true, message: 'Pontos resetados com sucesso!' });
     } catch (error) {
         console.error('❌ Erro ao resetar pontos:', error);
+        res.status(500).json({ success: false, message: 'Erro interno do servidor' });
+    }
+});
+
+// Rota para limpar logs de sistema do histórico
+app.post('/api/limpar-logs-sistema', async (req, res) => {
+    try {
+        // Limpar do MongoDB
+        if (mongoose.connection.readyState === 1) {
+            await Historico.deleteMany({ tipo: 'sistema' });
+            console.log('🧹 MongoDB: Logs de sistema removidos do histórico');
+        }
+
+        // Limpar local
+        const historicoLocal = lerDados(HISTORICO_FILE);
+        const historicoLimpo = historicoLocal.filter(item => item.tipo !== 'sistema');
+        salvarDados(HISTORICO_FILE, historicoLimpo);
+        console.log('🧹 Local: Logs de sistema removidos do histórico');
+
+        res.json({ success: true, message: 'Logs de sistema removidos do histórico!' });
+    } catch (error) {
+        console.error('❌ Erro ao limpar logs:', error);
         res.status(500).json({ success: false, message: 'Erro interno do servidor' });
     }
 });
