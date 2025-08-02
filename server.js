@@ -34,7 +34,6 @@ const connectDB = async () => {
             socketTimeoutMS: 45000, // Timeout de socket de 45 segundos
             maxPoolSize: 10, // Máximo 10 conexões simultâneas
             bufferCommands: false, // Não aguardar conexão para comandos
-            bufferMaxEntries: 0, // Não fazer buffer de operações
         });
         
         console.log('🗄️ MongoDB Atlas conectado com sucesso!');
