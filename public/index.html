@@ -293,12 +293,6 @@
     
     <!-- Sistema de Autenticação -->
     <script>
-        // Forçar redirecionamento para o login no Render
-        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-            // Se não estiver em desenvolvimento local, redirecionar para o login no Render
-            window.location.href = 'https://tabela-de-pontos.onrender.com/login';
-        }
-
         // Definir AuthUtils antes de carregar outros scripts
         window.AuthUtils = {
             isLoggedIn() {
@@ -343,6 +337,19 @@
                 return true;
             }
         };
+
+        // Verificar redirecionamento para login apenas se não estiver logado
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // Aguardar um momento para o localStorage carregar, então verificar se está logado
+            setTimeout(() => {
+                if (!window.AuthUtils.isLoggedIn()) {
+                    console.log('🔒 Usuário não logado, redirecionando para login...');
+                    window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                } else {
+                    console.log('✅ Usuário já logado, mantendo na página principal');
+                }
+            }, 100);
+        }
     </script>
     
     <!-- Socket.IO para sincronização em tempo real -->
