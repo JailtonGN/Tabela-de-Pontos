@@ -28,8 +28,6 @@ const connectDB = async () => {
         const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://tabela-pontos:TabelaPontos2025!@cluster0.nblesgu.mongodb.net/tabela-pontos?retryWrites=true&w=majority&appName=Cluster0&authSource=admin';
         
         await mongoose.connect(mongoURI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
             serverSelectionTimeoutMS: 5000, // Timeout de 5 segundos
             socketTimeoutMS: 45000, // Timeout de socket de 45 segundos
             maxPoolSize: 10, // Máximo 10 conexões simultâneas
