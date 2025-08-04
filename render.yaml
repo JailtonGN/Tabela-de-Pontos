@@ -1,0 +1,36 @@
+# 🚀 Render Deploy Configuration
+# Configuração otimizada para deploy no Render.com
+
+services:
+  - type: web
+    name: tabela-pontos-app
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false
+      - key: RATE_LIMIT_WINDOW
+        value: 15
+      - key: RATE_LIMIT_MAX
+        value: 1000
+
+# ================================
+# INSTRUÇÕES DE DEPLOY NO RENDER:
+# ================================
+# 
+# 1. Conecte sua conta GitHub ao Render
+# 2. Selecione o repositório Tabela-de-Pontos
+# 3. Configure as seguintes variáveis de ambiente:
+#    - MONGODB_URI: Sua string de conexão MongoDB Atlas
+#    - RATE_LIMIT_WINDOW_MS: 900000
+#    - RATE_LIMIT_MAX_REQUESTS: 100
+#    - SESSION_SECRET: Uma chave secreta aleatória
+# 4. Deploy automático será configurado
+# 5. Render detectará automaticamente que é um projeto Node.js
+#
+# URL será: https://tabela-de-pontos.onrender.com

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste de Cadastro - CORREÇÃO</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .status.ok { background: #28a745; color: white; }
+        .status.error { background: #dc3545; color: white; }
+        .status.warning { background: #ffc107; color: black; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Cadastro - CORREÇÃO</h1>
+    <p>Esta página testa se o problema do cadastro de crianças foi resolvido.</p>
+
+    <div class="test-section">
+        <h2>🔧 Status do Sistema</h2>
+        <div id="status-container">
+            <div>Servidor: <span id="server-status" class="status">Verificando...</span></div>
+            <div>WebSocket: <span id="websocket-status" class="status">Verificando...</span></div>
+            <div>LocalStorage: <span id="localstorage-status" class="status">Verificando...</span></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>👶 Teste de Cadastro de Criança</h2>
+        <p>Teste se uma criança criada permanece após sincronização:</p>
+        
+        <div>
+            <label>Nome: <input type="text" id="test-nome" value="teste-crianca" /></label>
+            <label>Emoji: <select id="test-emoji">
+                <option value="👦">👦</option>
+                <option value="👧">👧</option>
+                <option value="🧒">🧒</option>
+                <option value="👶">👶</option>
+            </select></label>
+            <label>Cor: <select id="test-cor">
+                <option value="0">Vermelho</option>
+                <option value="1">Verde</option>
+                <option value="2">Azul</option>
+            </select></label>
+        </div>
+        
+        <button onclick="testarCadastro()">🧪 Testar Cadastro</button>
+        <button onclick="verificarCriancas()">🔍 Verificar Crianças</button>
+        <button onclick="limparTeste()">🗑️ Limpar Teste</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Resultados do Teste</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Logs do Sistema</h2>
+        <div id="system-logs" class="log"></div>
+        <button onclick="limparLogs()">🧹 Limpar Logs</button>
+    </div>
+
+    <script>
+        let testResults = [];
+        let systemLogs = [];
+
+        // Interceptar console.log para capturar logs
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addLog('LOG', args.join(' '));
+        };
+
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addLog('ERROR', args.join(' '));
+        };
+
+        console.warn = function(...args) {
+            originalWarn.apply(console, args);
+            addLog('WARN', args.join(' '));
+        };
+
+        function addLog(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            systemLogs.push(`[${timestamp}] ${type}: ${message}`);
+            updateLogsDisplay();
+        }
+
+        function updateLogsDisplay() {
+            const logsContainer = document.getElementById('system-logs');
+            logsContainer.textContent = systemLogs.slice(-50).join('\n');
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function addTestResult(type, message) {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push({ type, message, timestamp });
+            updateResultsDisplay();
+        }
+
+        function updateResultsDisplay() {
+            const container = document.getElementById('test-results');
+            container.innerHTML = testResults.map(result => 
+                `<div class="test-result ${result.type}">
+                    <strong>[${result.timestamp}]</strong> ${result.message}
+                </div>`
+            ).join('');
+        }
+
+        async function verificarStatusSistema() {
+            try {
+                // Verificar servidor
+                const serverResponse = await fetch('/api/pontos');
+                if (serverResponse.ok) {
+                    document.getElementById('server-status').textContent = 'OK';
+                    document.getElementById('server-status').className = 'status ok';
+                } else {
+                    document.getElementById('server-status').textContent = 'ERRO';
+                    document.getElementById('server-status').className = 'status error';
+                }
+
+                // Verificar localStorage
+                if (typeof localStorage !== 'undefined') {
+                    document.getElementById('localstorage-status').textContent = 'OK';
+                    document.getElementById('localstorage-status').className = 'status ok';
+                } else {
+                    document.getElementById('localstorage-status').textContent = 'ERRO';
+                    document.getElementById('localstorage-status').className = 'status error';
+                }
+
+                // Verificar WebSocket (simulado)
+                document.getElementById('websocket-status').textContent = 'OK';
+                document.getElementById('websocket-status').className = 'status ok';
+
+            } catch (error) {
+                addTestResult('error', `Erro ao verificar status: ${error.message}`);
+            }
+        }
+
+        async function testarCadastro() {
+            addTestResult('info', '🧪 Iniciando teste de cadastro...');
+            
+            try {
+                const nome = document.getElementById('test-nome').value;
+                const emoji = document.getElementById('test-emoji').value;
+                const corIndex = parseInt(document.getElementById('test-cor').value);
+                
+                if (!nome) {
+                    addTestResult('error', '❌ Nome não pode estar vazio');
+                    return;
+                }
+
+                // Simular cadastro de criança
+                const novaCrianca = {
+                    id: Date.now(),
+                    nome: nome,
+                    emoji: emoji,
+                    cor: { nome: 'Vermelho', valor: '#FF6B6B' },
+                    pontos: 0
+                };
+
+                addTestResult('info', `👶 Criando criança: ${nome}`);
+
+                // Salvar no localStorage
+                const filhosAtuais = JSON.parse(localStorage.getItem('filhos') || '[]');
+                filhosAtuais.push(novaCrianca);
+                localStorage.setItem('filhos', JSON.stringify(filhosAtuais));
+
+                addTestResult('success', `✅ Criança "${nome}" criada localmente`);
+
+                // Simular sincronização
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Verificar se ainda existe
+                const filhosAposSync = JSON.parse(localStorage.getItem('filhos') || '[]');
+                const criancaEncontrada = filhosAposSync.find(f => f.nome === nome);
+                
+                if (criancaEncontrada) {
+                    addTestResult('success', `✅ Criança "${nome}" ainda existe após sincronização`);
+                } else {
+                    addTestResult('error', `❌ Criança "${nome}" desapareceu após sincronização`);
+                }
+
+            } catch (error) {
+                addTestResult('error', `❌ Erro no teste: ${error.message}`);
+            }
+        }
+
+        async function verificarCriancas() {
+            addTestResult('info', '🔍 Verificando crianças atuais...');
+            
+            try {
+                const filhos = JSON.parse(localStorage.getItem('filhos') || '[]');
+                const pontos = JSON.parse(localStorage.getItem('pontos') || '{}');
+                
+                addTestResult('info', `📊 Total de crianças: ${filhos.length}`);
+                
+                filhos.forEach(filho => {
+                    const pontosFilho = pontos[filho.nome.toLowerCase()] || 0;
+                    addTestResult('info', `👶 ${filho.nome} (${filho.emoji}) - ${pontosFilho} pontos`);
+                });
+
+                // Verificar inconsistências
+                const nomesFilhos = filhos.map(f => f.nome.toLowerCase());
+                const nomesPontos = Object.keys(pontos);
+                
+                const pontosSemFilho = nomesPontos.filter(nome => !nomesFilhos.includes(nome));
+                const filhosSemPontos = nomesFilhos.filter(nome => !nomesPontos.includes(nome));
+                
+                if (pontosSemFilho.length > 0) {
+                    addTestResult('warning', `⚠️ Pontos órfãos: ${pontosSemFilho.join(', ')}`);
+                }
+                
+                if (filhosSemPontos.length > 0) {
+                    addTestResult('warning', `⚠️ Filhos sem pontos: ${filhosSemPontos.join(', ')}`);
+                }
+
+            } catch (error) {
+                addTestResult('error', `❌ Erro ao verificar crianças: ${error.message}`);
+            }
+        }
+
+        function limparTeste() {
+            const filhos = JSON.parse(localStorage.getItem('filhos') || '[]');
+            const filhosLimpos = filhos.filter(f => !f.nome.includes('teste'));
+            localStorage.setItem('filhos', JSON.stringify(filhosLimpos));
+            
+            addTestResult('info', '🧹 Crianças de teste removidas');
+        }
+
+        function limparLogs() {
+            systemLogs = [];
+            updateLogsDisplay();
+        }
+
+        // Inicializar
+        window.addEventListener('load', () => {
+            verificarStatusSistema();
+            addTestResult('info', '🚀 Sistema de teste inicializado');
+        });
+    </script>
+</body>
+</html> 

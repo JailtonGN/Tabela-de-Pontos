@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Teste de Cadastro - Sistema de Pontos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste de Cadastro - Sistema de Pontos</h1>
+    
+    <div class="test-section">
+        <h2>📊 Status dos Dados</h2>
+        <div id="status-dados"></div>
+        <button onclick="verificarDados()">🔄 Verificar Dados</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>👶 Teste de Cadastro de Crianças</h2>
+        <div>
+            <input type="text" id="nome-crianca" placeholder="Nome da criança">
+            <select id="emoji-crianca">
+                <option value="👦">👦 Menino</option>
+                <option value="👧">👧 Menina</option>
+                <option value="👶">👶 Bebê</option>
+            </select>
+            <button onclick="testarCadastroCrianca()">➕ Testar Cadastro</button>
+        </div>
+        <div id="resultado-crianca"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>🎯 Teste de Cadastro de Atividades</h2>
+        <div>
+            <input type="text" id="nome-atividade" placeholder="Nome da atividade">
+            <input type="number" id="pontos-atividade" value="10" min="1">
+            <select id="tipo-atividade">
+                <option value="positiva">✅ Positiva</option>
+                <option value="negativa">❌ Negativa</option>
+            </select>
+            <button onclick="testarCadastroAtividade()">➕ Testar Cadastro</button>
+        </div>
+        <div id="resultado-atividade"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 Log de Testes</h2>
+        <div id="log-teste" class="log"></div>
+        <button onclick="limparLog()">🗑️ Limpar Log</button>
+    </div>
+
+    <script>
+        // Função para adicionar log
+        function adicionarLog(mensagem, tipo = 'info') {
+            const log = document.getElementById('log-teste');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `[${timestamp}] ${mensagem}`;
+            logEntry.className = tipo;
+            log.insertBefore(logEntry, log.firstChild);
+        }
+
+        // Função para limpar log
+        function limparLog() {
+            document.getElementById('log-teste').innerHTML = '';
+        }
+
+        // Função para verificar dados
+        async function verificarDados() {
+            adicionarLog('🔍 Verificando dados...', 'info');
+            
+            try {
+                // Verificar dados locais
+                const criancas = JSON.parse(localStorage.getItem('filhos') || '[]');
+                const atividadesPositivas = JSON.parse(localStorage.getItem('atividadesPositivas') || '[]');
+                const atividadesNegativas = JSON.parse(localStorage.getItem('atividadesNegativas') || '[]');
+                const pontos = JSON.parse(localStorage.getItem('pontos') || '{}');
+                
+                const statusDiv = document.getElementById('status-dados');
+                statusDiv.innerHTML = `
+                    <div class="test-result success">
+                        <strong>✅ Dados Locais:</strong><br>
+                        • Crianças: ${criancas.length}<br>
+                        • Atividades Positivas: ${atividadesPositivas.length}<br>
+                        • Atividades Negativas: ${atividadesNegativas.length}<br>
+                        • Pontos registrados: ${Object.keys(pontos).length}
+                    </div>
+                `;
+                
+                adicionarLog(`✅ Dados verificados: ${criancas.length} crianças, ${atividadesPositivas.length + atividadesNegativas.length} atividades`, 'success');
+                
+            } catch (error) {
+                adicionarLog(`❌ Erro ao verificar dados: ${error.message}`, 'error');
+            }
+        }
+
+        // Função para testar cadastro de criança
+        async function testarCadastroCrianca() {
+            const nome = document.getElementById('nome-crianca').value.trim();
+            const emoji = document.getElementById('emoji-crianca').value;
+            
+            if (!nome) {
+                adicionarLog('❌ Nome da criança é obrigatório', 'error');
+                return;
+            }
+            
+            adicionarLog(`👶 Testando cadastro de criança: ${nome}`, 'info');
+            
+            try {
+                // Simular cadastro
+                const criancas = JSON.parse(localStorage.getItem('filhos') || '[]');
+                const novaCrianca = {
+                    id: Date.now(),
+                    nome: nome,
+                    emoji: emoji,
+                    cor: { nome: 'Azul', valor: '#4facfe', gradiente: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+                    pontos: 0
+                };
+                
+                // Verificar duplicação
+                if (criancas.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
+                    adicionarLog(`❌ Criança "${nome}" já existe`, 'error');
+                    return;
+                }
+                
+                // Adicionar criança
+                criancas.push(novaCrianca);
+                localStorage.setItem('filhos', JSON.stringify(criancas));
+                
+                // Adicionar pontos zerados
+                const pontos = JSON.parse(localStorage.getItem('pontos') || '{}');
+                pontos[nome.toLowerCase()] = 0;
+                localStorage.setItem('pontos', JSON.stringify(pontos));
+                
+                adicionarLog(`✅ Criança "${nome}" cadastrada com sucesso`, 'success');
+                
+                // Limpar campo
+                document.getElementById('nome-crianca').value = '';
+                
+                // Atualizar status
+                verificarDados();
+                
+            } catch (error) {
+                adicionarLog(`❌ Erro ao cadastrar criança: ${error.message}`, 'error');
+            }
+        }
+
+        // Função para testar cadastro de atividade
+        async function testarCadastroAtividade() {
+            const nome = document.getElementById('nome-atividade').value.trim();
+            const pontos = parseInt(document.getElementById('pontos-atividade').value);
+            const tipo = document.getElementById('tipo-atividade').value;
+            
+            if (!nome || isNaN(pontos) || pontos <= 0) {
+                adicionarLog('❌ Nome e pontos válidos são obrigatórios', 'error');
+                return;
+            }
+            
+            adicionarLog(`🎯 Testando cadastro de atividade: ${nome} (${pontos} pontos, ${tipo})`, 'info');
+            
+            try {
+                // Simular cadastro
+                const atividades = JSON.parse(localStorage.getItem(`atividades${tipo === 'positiva' ? 'Positivas' : 'Negativas'}`) || '[]');
+                
+                // Verificar duplicação
+                if (atividades.some(a => a.nome.toLowerCase() === nome.toLowerCase())) {
+                    adicionarLog(`❌ Atividade "${nome}" já existe`, 'error');
+                    return;
+                }
+                
+                // Adicionar atividade
+                const novaAtividade = {
+                    id: Date.now() + Math.random(),
+                    nome: nome,
+                    pontos: pontos,
+                    tipo: tipo
+                };
+                
+                atividades.push(novaAtividade);
+                localStorage.setItem(`atividades${tipo === 'positiva' ? 'Positivas' : 'Negativas'}`, JSON.stringify(atividades));
+                
+                adicionarLog(`✅ Atividade "${nome}" cadastrada com sucesso`, 'success');
+                
+                // Limpar campos
+                document.getElementById('nome-atividade').value = '';
+                document.getElementById('pontos-atividade').value = '10';
+                
+                // Atualizar status
+                verificarDados();
+                
+            } catch (error) {
+                adicionarLog(`❌ Erro ao cadastrar atividade: ${error.message}`, 'error');
+            }
+        }
+
+        // Inicializar página
+        window.onload = function() {
+            adicionarLog('🧪 Página de teste carregada', 'info');
+            verificarDados();
+        };
+    </script>
+</body>
+</html> 

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏆 Sistema de Pontos - Meus Filhos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="modal-styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>🏆 Sistema de Pontos</h1>
+                    <p>Gerenciando os pontos dos meus filhos</p>
+                </div>
+                <div class="header-right">
+                    <!-- Status WebSocket no canto superior direito -->
+                    <div id="websocket-status" class="websocket-status connecting">
+                        🔄 Conectando...
+                    </div>
+                    <!-- Botão de configurações logo abaixo do status -->
+                    <button id="btn-configuracoes" class="btn-config" title="Configurações">
+                        <span class="config-icon">⚙️</span> Configurações
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Botões de ação mais abaixo -->
+            <div class="header-actions">
+                <button id="btn-sync-atividades" class="btn-sync" title="Sincronizar Atividades com Servidor">
+                    ☁️ Sync
+                </button>
+                <button id="btn-atualizar" class="btn-atualizar" title="Sincronizar Dados Manualmente">
+                    🔄 Atualizar
+                </button>
+                <button id="btn-sair" class="btn-sair" title="Sair do Sistema">
+                    🚪 Sair
+                </button>
+            </div>
+        </header>
+
+        <!-- Seção Principal -->
+        <div class="main-content">
+            <!-- Dashboard de Pontos -->
+            <div class="dashboard-section">
+                <div class="card pontos-card">
+                    <h2>📊 Pontos Atuais</h2>
+                    <div class="pontos-display">
+                        <!-- Filhos serão renderizados dinamicamente aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Ações -->
+            <div class="acoes-section">
+                <div class="acoes-grid">
+                    <!-- Adicionar Pontos -->
+                    <div class="card acao-card">
+                        <h2>🎯 Adicionar Pontos</h2>
+                        <div class="form-group">
+                            <label for="filho-adicionar">Filho:</label>
+                            <select id="filho-adicionar" class="form-control">
+                                <!-- Opções serão preenchidas dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="atividade-adicionar">🎯 Escolha a atividade:</label>
+                            <div class="custom-dropdown">
+                                <div class="dropdown-header" id="dropdown-header-adicionar">
+                                    <span class="dropdown-placeholder">🔍 Selecione uma atividade...</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="dropdown-content" id="dropdown-content-adicionar">
+                                    <div class="dropdown-search">
+                                        <input type="text" placeholder="🔍 Buscar atividade..." id="search-adicionar">
+                                    </div>
+                                    <div class="dropdown-options" id="options-adicionar">
+                                        <!-- Opções serão preenchidas dinamicamente -->
+                                    </div>
+                                </div>
+                                <select id="atividade-adicionar" class="hidden-select">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <small class="form-hint">💡 Configure mais atividades no botão ⚙️ acima</small>
+                        </div>
+                        <button id="btn-adicionar" class="btn btn-success">➕ Adicionar Pontos</button>
+                    </div>
+
+                    <!-- Remover Pontos -->
+                    <div class="card acao-card">
+                        <h2>❌ Remover Pontos</h2>
+                        <div class="form-group">
+                            <label for="filho-remover">Filho:</label>
+                            <select id="filho-remover" class="form-control">
+                                <!-- Opções serão preenchidas dinamicamente -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="atividade-remover">🎯 Escolha a atividade:</label>
+                            <div class="custom-dropdown">
+                                <div class="dropdown-header" id="dropdown-header-remover">
+                                    <span class="dropdown-placeholder">🔍 Selecione uma atividade...</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="dropdown-content" id="dropdown-content-remover">
+                                    <div class="dropdown-search">
+                                        <input type="text" placeholder="🔍 Buscar atividade..." id="search-remover">
+                                    </div>
+                                    <div class="dropdown-options" id="options-remover">
+                                        <!-- Opções serão preenchidas dinamicamente -->
+                                    </div>
+                                </div>
+                                <select id="atividade-remover" class="hidden-select">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <small class="form-hint">💡 Configure mais atividades no botão ⚙️ acima</small>
+                        </div>
+                        <button id="btn-remover" class="btn btn-danger">➖ Remover Pontos</button>
+                    </div>
+                </div>
+
+                <!-- Pontos Avulsos -->
+                <div class="card pontos-avulsos-card">
+                    <h2>⚡ Pontos Avulsos</h2>
+                    <p class="card-subtitle">Ações rápidas para pontos individuais</p>
+                    <div class="pontos-avulsos-grid">
+                        <div class="ponto-avulso">
+                            <h3>➕ Adicionar</h3>
+                            <div class="form-group">
+                                <label for="filho-avulso-add">Filho:</label>
+                                <select id="filho-avulso-add" class="form-control">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pontos-avulso-add">Pontos:</label>
+                                <input type="number" id="pontos-avulso-add" class="form-control" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="motivo-avulso-add">Motivo:</label>
+                                <input type="text" id="motivo-avulso-add" class="form-control" placeholder="Motivo rápido">
+                            </div>
+                            <button id="btn-avulso-add" class="btn btn-success">➕ Adicionar Pontos</button>
+                        </div>
+                        
+                        <div class="ponto-avulso">
+                            <h3>➖ Remover</h3>
+                            <div class="form-group">
+                                <label for="filho-avulso-remove">Filho:</label>
+                                <select id="filho-avulso-remove" class="form-control">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="pontos-avulso-remove">Pontos:</label>
+                                <input type="number" id="pontos-avulso-remove" class="form-control" value="1" min="1">
+                            </div>
+                            <div class="form-group">
+                                <label for="motivo-avulso-remove">Motivo:</label>
+                                <input type="text" id="motivo-avulso-remove" class="form-control" placeholder="Motivo rápido">
+                            </div>
+                            <button id="btn-avulso-remove" class="btn btn-danger">➖ Remover Pontos</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Histórico -->
+            <div class="historico-section">
+                <div class="card historico-card">
+                    <h2>📝 Histórico Recente</h2>
+                    <div class="historico-header">
+                        <div class="filtros-container">
+                            <div class="filtro-grupo">
+                                <label for="filtro-filho">👥 Filtrar por filho:</label>
+                                <select id="filtro-filho" class="filtro-select">
+                                    <!-- Opções serão preenchidas dinamicamente -->
+                                </select>
+                            </div>
+                            <div class="filtro-grupo">
+                                <label for="filtro-periodo">📅 Filtrar por período:</label>
+                                <select id="filtro-periodo" class="filtro-select">
+                                    <option value="todos">📅 Todos os períodos</option>
+                                    <option value="hoje">📅 Hoje</option>
+                                    <option value="ontem">📅 Ontem</option>
+                                    <option value="semana">📅 Últimos 7 dias</option>
+                                    <option value="mes">📅 Últimos 30 dias</option>
+                                    <option value="personalizado">📅 Período personalizado</option>
+                                </select>
+                            </div>
+                            <div class="filtro-grupo" id="filtro-datas-personalizadas" style="display: none;">
+                                <label>📅 Período personalizado:</label>
+                                <div class="datas-container">
+                                    <input type="date" id="data-inicio" class="filtro-date">
+                                    <span>até</span>
+                                    <input type="date" id="data-fim" class="filtro-date">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="botoes-compartilhar">
+                            <button id="btn-compartilhar" class="btn btn-share">📤 Compartilhar</button>
+                        </div>
+                    </div>
+                    <div id="historico" class="historico-lista">
+                        <div class="historico-item">
+                            <span class="data">Hoje</span>
+                            <span class="acao">➕ João ganhou 10 pontos</span>
+                            <span class="motivo">Arrumou o quarto</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seção de Lembretes -->
+            <div class="lembretes-section">
+                <div class="card lembretes-card">
+                    <h2>📝 Lembretes das Crianças</h2>
+                    
+                    <!-- Área para Crianças (Modo Visitante) -->
+                    <div id="area-lembretes-criancas" class="lembretes-criancas" style="display: none;">
+                        <h3>💬 Deixe um lembrete para os pais</h3>
+                        <div class="lembrete-form">
+                            <div class="form-group">
+                                <label for="lembrete-crianca">👤 Quem está escrevendo:</label>
+                                <select id="lembrete-crianca" class="form-control">
+                                    <option value="">Selecione uma criança...</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="lembrete-mensagem">💭 Sua mensagem:</label>
+                                <textarea id="lembrete-mensagem" class="form-control" rows="3" 
+                                    placeholder="Escreva aqui o que você quer lembrar aos pais..." maxlength="500"></textarea>
+                                <small class="char-count">0/500 caracteres</small>
+                            </div>
+                            <button id="btn-enviar-lembrete" class="btn btn-primary">📤 Enviar Lembrete</button>
+                        </div>
+                    </div>
+
+                    <!-- Área para Pais/Admin -->
+                    <div id="area-lembretes-pais" class="lembretes-pais" style="display: none;">
+                        <div class="lembretes-header">
+                            <div class="lembretes-stats">
+                                <span id="contador-lembretes" class="badge">0 não lidos</span>
+                            </div>
+                            <div class="lembretes-actions">
+                                <button id="btn-limpar-lembretes" class="btn btn-warning btn-sm">🧹 Limpar Lidos</button>
+                            </div>
+                        </div>
+                        <div id="lista-lembretes" class="lista-lembretes">
+                            <!-- Lembretes serão carregados dinamicamente -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Configurações -->
+    <div id="modal-configuracoes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Configurações do Sistema</h2>
+                <button class="modal-close" id="fechar-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="config-tabs">
+                    <button class="tab-btn active" data-tab="filhos">👥 Filhos</button>
+                    <button class="tab-btn" data-tab="pontos">🎯 Atividades</button>
+                </div>
+
+                <!-- Aba Filhos -->
+                <div class="tab-content active" id="tab-filhos">
+                    <h3>👥 Configurações dos Filhos</h3>
+                    <div class="config-group">
+                        <h4>📝 Nomes dos Filhos</h4>
+                        <div class="input-group">
+                            <label>👦 Filho 1:</label>
+                            <input type="text" id="config-nome1" class="form-control" placeholder="Nome do primeiro filho">
+                        </div>
+                        <div class="input-group">
+                            <label>👧 Filho 2:</label>
+                            <input type="text" id="config-nome2" class="form-control" placeholder="Nome do segundo filho">
+                        </div>
+                        <div class="input-group">
+                            <label>👶 Filho 3:</label>
+                            <input type="text" id="config-nome3" class="form-control" placeholder="Nome do terceiro filho">
+                        </div>
+                    </div>
+                    <div class="config-group">
+                        <h4>🎭 Emojis Personalizados</h4>
+                        <div class="input-group">
+                            <label>Emoji Filho 1:</label>
+                            <input type="text" id="emoji-filho1" class="form-control" maxlength="2" placeholder="👦">
+                        </div>
+                        <div class="input-group">
+                            <label>Emoji Filho 2:</label>
+                            <input type="text" id="emoji-filho2" class="form-control" maxlength="2" placeholder="👧">
+                        </div>
+                        <div class="input-group">
+                            <label>Emoji Filho 3:</label>
+                            <input type="text" id="emoji-filho3" class="form-control" maxlength="2" placeholder="👶">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba Atividades -->
+                <div class="tab-content" id="tab-pontos">
+                    <h3>🎯 Gerenciar Atividades</h3>
+                    
+                    <!-- Atividades Positivas -->
+                    <div class="config-group">
+                        <h4>➕ Atividades Positivas</h4>
+                        <div class="atividades-container">
+                            <div class="nova-atividade-form">
+                                <div class="input-row">
+                                    <input type="text" id="nova-atividade-positiva" class="form-control" placeholder="Ex: Arrumou o quarto">
+                                    <input type="number" id="pontos-atividade-positiva" class="form-control pontos-input" value="10" min="1" max="100">
+                                    <button onclick="adicionarAtividade('positiva')" class="btn btn-success btn-sm">➕</button>
+                                </div>
+                            </div>
+                            <div id="lista-atividades-positivas" class="lista-atividades"></div>
+                        </div>
+                    </div>
+
+                    <!-- Atividades Negativas -->
+                    <div class="config-group">
+                        <h4>➖ Atividades Negativas</h4>
+                        <div class="atividades-container">
+                            <div class="nova-atividade-form">
+                                <div class="input-row">
+                                    <input type="text" id="nova-atividade-negativa" class="form-control" placeholder="Ex: Não arrumou o quarto">
+                                    <input type="number" id="pontos-atividade-negativa" class="form-control pontos-input" value="5" min="1" max="100">
+                                    <button onclick="adicionarAtividade('negativa')" class="btn btn-danger btn-sm">➖</button>
+                                </div>
+                            </div>
+                            <div id="lista-atividades-negativas" class="lista-atividades"></div>
+                        </div>
+                    </div>
+
+                    <div class="config-group">
+                        <h4>🔄 Atividades Padrão</h4>
+                        <p class="help-text">✅ <strong>Configuração:</strong> Use as seções acima para gerenciar atividades.</p>
+                    </div>
+                </div>
+
+                <!-- Aba de Backup removida -->
+            </div>
+            <div class="modal-footer">
+                <div class="footer-left">
+                    <button id="btn-baixar-log" class="btn btn-primary admin-only">📋 Baixar Log</button>
+                    <button id="btn-resetar-pontos" class="btn btn-warning admin-only">🔄 Resetar Pontos</button>
+                    <button id="btn-limpar-historico" class="btn btn-danger admin-only">🗑️ Limpar Histórico</button>
+                </div>
+                <div class="footer-right">
+                    <button id="btn-salvar-config" class="btn btn-success">💾 Salvar Configurações</button>
+                    <button id="btn-cancelar-config" class="btn btn-secondary">❌ Cancelar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container de Notificações -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Socket.IO Client -->
+    <script src="/socket.io/socket.io.js"></script>
+    
+    <!-- WebSocket Sync habilitado -->
+    <script src="websocket-sync.js"></script>
+
+    <!-- Módulo de Notificações Centralizado -->
+    <script src="utils/toast-utils.js"></script>
+    
+    <!-- Sistema de Autenticação -->
+    <script>
+        // Definir AuthUtils antes de carregar outros scripts
+        window.AuthUtils = {
+            isLoggedIn() {
+                const session = localStorage.getItem('userSession');
+                if (!session) return false;
+                
+                const userData = JSON.parse(session);
+                const now = new Date();
+                const expires = new Date(userData.expires);
+                
+                return now < expires;
+            },
+
+            getCurrentUser() {
+                if (!this.isLoggedIn()) return null;
+                return JSON.parse(localStorage.getItem('userSession'));
+            },
+
+            hasPermission(permission) {
+                const user = this.getCurrentUser();
+                return user && user.permissions.includes(permission);
+            },
+
+            logout() {
+                localStorage.removeItem('userSession');
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                } else {
+                    window.location.href = '/login.html';
+                }
+            },
+
+            requireAuth() {
+                if (!this.isLoggedIn()) {
+                    if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                        window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                    } else {
+                        window.location.href = '/login.html';
+                    }
+                    return false;
+                }
+                return true;
+            }
+        };
+
+        // Verificar redirecionamento para login apenas se não estiver logado
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            // Aguardar um momento para o localStorage carregar, então verificar se está logado
+            setTimeout(() => {
+                if (!window.AuthUtils.isLoggedIn()) {
+                    console.log('🔒 Usuário não logado, redirecionando para login...');
+                    window.location.href = 'https://tabela-de-pontos.onrender.com/login';
+                } else {
+                    console.log('✅ Usuário já logado, mantendo na página principal');
+                }
+            }, 100);
+        }
+    </script>
+    
+    <!-- ✨ REFATORAÇÃO DRY: Utilitários Centralizados -->
+    <script src="utils/api-service.js"></script>
+    <script src="utils/dom-utils.js"></script>
+    <script src="utils/event-manager.js"></script>
+    <script src="utils/state-manager.js"></script>
+    <script src="utils/file-utils.js"></script>
+    <script src="utils/validation-utils.js"></script>
+    
+    <!-- Scripts Principais -->
+    <script src="script.js"></script>
+</body>
+</html>
