@@ -7,6 +7,7 @@ services:
     env: node
     buildCommand: npm install
     startCommand: npm start
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,10 +15,22 @@ services:
         value: 10000
       - key: MONGODB_URI
         sync: false
-      - key: RATE_LIMIT_WINDOW
-        value: 15
-      - key: RATE_LIMIT_MAX
-        value: 1000
+      - key: JWT_SECRET
+        sync: false
+      - key: SESSION_SECRET
+        sync: false
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: LOG_LEVEL
+        value: info
+      - key: ENABLE_WEBSOCKET
+        value: true
+      - key: ENABLE_ANALYTICS
+        value: true
 
 # ================================
 # INSTRUÇÕES DE DEPLOY NO RENDER:
@@ -25,12 +38,17 @@ services:
 # 
 # 1. Conecte sua conta GitHub ao Render
 # 2. Selecione o repositório Tabela-de-Pontos
-# 3. Configure as seguintes variáveis de ambiente:
+# 3. Configure as seguintes variáveis de ambiente OBRIGATÓRIAS:
 #    - MONGODB_URI: Sua string de conexão MongoDB Atlas
-#    - RATE_LIMIT_WINDOW_MS: 900000
-#    - RATE_LIMIT_MAX_REQUESTS: 100
-#    - SESSION_SECRET: Uma chave secreta aleatória
+#    - JWT_SECRET: Chave secreta para autenticação (64+ caracteres)
+#    - SESSION_SECRET: Outra chave secreta para sessões
 # 4. Deploy automático será configurado
 # 5. Render detectará automaticamente que é um projeto Node.js
 #
-# URL será: https://tabela-de-pontos.onrender.com
+# URL será: https://tabela-pontos-app.onrender.com
+#
+# ================================
+# GERAR CHAVES SECRETAS:
+# ================================
+# JWT_SECRET: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+# SESSION_SECRET: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"

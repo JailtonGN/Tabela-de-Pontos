@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const fs = require('fs');
 const mongoose = require('mongoose');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -32,10 +31,10 @@ const connectDB = async () => {
         const mongoURI = process.env.MONGODB_URI || 'mongodb+srv://tabela-pontos:TabelaPontos2025!@cluster0.nblesgu.mongodb.net/tabela-pontos?retryWrites=true&w=majority&appName=Cluster0&authSource=admin';
         
         await mongoose.connect(mongoURI, {
-            serverSelectionTimeoutMS: 5000, // Timeout de 5 segundos
+            serverSelectionTimeoutMS: 10000, // Timeout de 10 segundos
             socketTimeoutMS: 45000, // Timeout de socket de 45 segundos
             maxPoolSize: 10, // Máximo 10 conexões simultâneas
-            bufferCommands: false, // Não aguardar conexão para comandos
+            bufferCommands: true, // Permitir comandos antes da conexão
         });
         
         console.log('🗄️ MongoDB Atlas conectado com sucesso!');
@@ -43,7 +42,7 @@ const connectDB = async () => {
     } catch (error) {
         console.error('❌ Erro ao conectar MongoDB:', error.message);
         console.log('💡 Dica: Configure IP 0.0.0.0/0 no MongoDB Atlas para aceitar qualquer IP');
-        console.log('📁 Sistema funcionará apenas com armazenamento local');
+        throw error; // Falhar se não conseguir conectar ao MongoDB
     }
 };
 
@@ -85,55 +84,47 @@ io.on('connection', (socket) => {
 // Função auxiliar para obter pontos atuais
 async function obterPontosAtuais() {
     try {
-        if (mongoose.connection.readyState === 1) {
-            const pontosDB = await Pontos.find({});
-            const pontosObj = {};
-            pontosDB.forEach(p => {
-                pontosObj[p.nome.toLowerCase()] = p.pontos;
-            });
-            return pontosObj;
-        } else {
-            return lerDados(PONTOS_FILE);
+        // Verificar se MongoDB está conectado
+        if (mongoose.connection.readyState !== 1) {
+            throw new Error('MongoDB não está conectado');
         }
+        
+        const pontosDB = await Pontos.find({});
+        const pontosObj = {};
+        pontosDB.forEach(p => {
+            pontosObj[p.nome.toLowerCase()] = p.pontos;
+        });
+        return pontosObj;
     } catch (error) {
         console.error('❌ Erro ao obter pontos:', error);
-        return {};
+        throw error; // Propagar erro em vez de retornar objeto vazio
     }
 }
 
-// Arquivos de dados locais (backup)
-const PONTOS_FILE = 'data/pontos.json';
-const HISTORICO_FILE = 'data/historico.json';
-
-// Criar pasta data se não existir
-if (!fs.existsSync('data')) {
-    fs.mkdirSync('data');
+// ✨ NOVA FUNÇÃO: Verificar status do MongoDB
+function getMongoDBStatus() {
+    const status = {
+        connected: mongoose.connection.readyState === 1,
+        readyState: mongoose.connection.readyState,
+        statusText: getReadyStateText(mongoose.connection.readyState)
+    };
+    
+    console.log(`🔍 Status MongoDB: ${status.statusText} (${status.readyState})`);
+    return status;
 }
 
-// Função para ler dados do arquivo JSON
-function lerDados(arquivo) {
-    try {
-        if (fs.existsSync(arquivo)) {
-            const data = fs.readFileSync(arquivo, 'utf8');
-            return JSON.parse(data);
-        }
-        return {};
-    } catch (error) {
-        console.error(`❌ Erro ao ler ${arquivo}:`, error.message);
-        return {};
+function getReadyStateText(readyState) {
+    switch (readyState) {
+        case 0: return 'disconnected';
+        case 1: return 'connected';
+        case 2: return 'connecting';
+        case 3: return 'disconnecting';
+        default: return 'unknown';
     }
 }
 
-// Função para salvar dados no arquivo JSON
-function salvarDados(arquivo, dados) {
-    try {
-        fs.writeFileSync(arquivo, JSON.stringify(dados, null, 2));
-        return true;
-    } catch (error) {
-        console.error(`❌ Erro ao salvar ${arquivo}:`, error.message);
-        return false;
-    }
-}
+// Sistema agora usa exclusivamente MongoDB Atlas
+// Removidas funções de armazenamento local para evitar conflitos
 
 // Função para salvar logs de sistema (separado do histórico de pontos)
 async function salvarLogSistema(dadosLog) {
@@ -155,48 +146,27 @@ async function salvarLogSistema(dadosLog) {
     }
 }
 
-// Função para salvar no histórico (MongoDB + Local) - APENAS para pontos das crianças
+// Função para salvar no histórico (MongoDB exclusivo) - APENAS para pontos das crianças
 async function salvarHistorico(dadosLog) {
     try {
-        // Salvar no MongoDB se disponível
-        if (mongoose.connection.readyState === 1) {
-            const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
-            const novoId = ultimoHistorico ? ultimoHistorico.id + 1 : 1;
+        // Sempre usar MongoDB - sem fallback local
+        const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
+        const novoId = ultimoHistorico ? ultimoHistorico.id + 1 : 1;
 
-            const novoLog = new Historico({
-                id: novoId,
-                nome: dadosLog.nome,
-                pontos: dadosLog.pontos,
-                motivo: dadosLog.motivo,
-                tipo: dadosLog.tipo, // 'adicionar' ou 'remover'
-                data: new Date(dadosLog.data || dadosLog.timestamp)
-            });
-
-            await novoLog.save();
-            console.log('📝 Histórico salvo no MongoDB:', dadosLog.tipo);
-        }
-
-        // Backup local
-        let historicoLocal = lerDados(HISTORICO_FILE);
-        const novoRegistroLocal = {
-            id: historicoLocal.length ? Math.max(...historicoLocal.map(h => h.id || 0)) + 1 : 1,
+        const novoLog = new Historico({
+            id: novoId,
             nome: dadosLog.nome,
             pontos: dadosLog.pontos,
             motivo: dadosLog.motivo,
-            tipo: dadosLog.tipo,
-            data: dadosLog.data || dadosLog.timestamp
-        };
-        
-        if (Array.isArray(historicoLocal)) {
-            historicoLocal.unshift(novoRegistroLocal);
-        } else {
-            historicoLocal = [novoRegistroLocal];
-        }
-        
-        salvarDados(HISTORICO_FILE, historicoLocal);
-        console.log('📝 Histórico salvo localmente');
+            tipo: dadosLog.tipo, // 'adicionar' ou 'remover'
+            data: new Date(dadosLog.data || dadosLog.timestamp)
+        });
+
+        await novoLog.save();
+        console.log('📝 Histórico salvo no MongoDB Atlas:', dadosLog.tipo);
     } catch (error) {
         console.error('❌ Erro ao salvar histórico:', error);
+        throw error; // Propagar erro para tratamento adequado
     }
 }
 
@@ -252,6 +222,111 @@ const verificarAutenticacao = (requiredPermission = null) => {
         }
     };
 };
+
+// ✨ NOVA ROTA: Sincronização inteligente para resolver conflitos
+app.post('/api/sincronizar-pendentes', async (req, res) => {
+    try {
+        const { operacoesPendentes } = req.body;
+        
+        if (!operacoesPendentes || !Array.isArray(operacoesPendentes)) {
+            return ResponseHelper.sendError(res, 'Operações pendentes inválidas', 400);
+        }
+        
+        console.log(`🔄 Sincronizando ${operacoesPendentes.length} operações pendentes...`);
+        
+        const resultados = [];
+        
+        for (const operacao of operacoesPendentes) {
+            try {
+                const { nome, pontos, atividade, tipo, timestamp } = operacao;
+                
+                // Aplicar operação no MongoDB
+                const pontosExistentes = await Pontos.findOneAndUpdate(
+                    { nome: nome.toLowerCase() },
+                    { 
+                        $inc: { pontos: tipo === 'adicionar' ? pontos : -pontos },
+                        ultimaAtualizacao: new Date()
+                    },
+                    { 
+                        upsert: true, 
+                        new: true,
+                        setDefaultsOnInsert: true
+                    }
+                );
+                
+                // Não permitir pontos negativos
+                if (pontosExistentes.pontos < 0) {
+                    await Pontos.updateOne(
+                        { nome: nome.toLowerCase() },
+                        { pontos: 0 }
+                    );
+                    pontosExistentes.pontos = 0;
+                }
+                
+                // Salvar no histórico
+                const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
+                const novoId = ultimoHistorico ? ultimoHistorico.id + 1 : 1;
+                
+                const novoRegistro = new Historico({
+                    id: novoId,
+                    nome: nome.toLowerCase(),
+                    pontos: pontos,
+                    motivo: atividade,
+                    tipo: tipo,
+                    data: new Date(timestamp)
+                });
+                
+                await novoRegistro.save();
+                
+                resultados.push({
+                    success: true,
+                    nome: nome,
+                    tipo: tipo,
+                    pontos: pontos,
+                    novoTotal: pontosExistentes.pontos
+                });
+                
+                console.log(`✅ Sincronizado: ${tipo} ${pontos} pontos para ${nome}`);
+                
+            } catch (error) {
+                console.error(`❌ Erro ao sincronizar operação:`, error);
+                resultados.push({
+                    success: false,
+                    nome: operacao.nome,
+                    tipo: operacao.tipo,
+                    error: error.message
+                });
+            }
+        }
+        
+        return ResponseHelper.sendSuccess(res, {
+            sincronizadas: resultados.filter(r => r.success).length,
+            falharam: resultados.filter(r => !r.success).length,
+            resultados: resultados
+        }, `Sincronização concluída: ${resultados.filter(r => r.success).length}/${operacoesPendentes.length} operações`);
+        
+    } catch (error) {
+        console.error('❌ Erro na sincronização pendente:', error);
+        return ResponseHelper.sendInternalError(res, error, 'sincronizar operações pendentes');
+    }
+});
+
+// ✨ NOVA ROTA: Verificar status do MongoDB
+app.get('/api/status', (req, res) => {
+    const mongoStatus = getMongoDBStatus();
+    
+    const status = {
+        mongodb: mongoStatus,
+        server: {
+            uptime: process.uptime(),
+            timestamp: new Date().toISOString(),
+            version: process.version
+        },
+        online: mongoStatus.connected
+    };
+    
+    res.json(status);
+});
 
 // Rota de login
 app.post('/api/login', (req, res) => {
@@ -353,24 +428,23 @@ app.get('/', (req, res) => {
 // Rotas da API
 app.get('/api/pontos', async (req, res) => {
     try {
-        // Tentar MongoDB primeiro
-        if (mongoose.connection.readyState === 1) {
-            const pontosDB = await Pontos.find({});
-            const pontosObj = {};
-            pontosDB.forEach(p => {
-                pontosObj[p.nome.toLowerCase()] = p.pontos;
+        const mongoStatus = getMongoDBStatus();
+        
+        if (!mongoStatus.connected) {
+            return res.status(503).json({ 
+                error: 'MongoDB não está conectado',
+                status: mongoStatus,
+                message: 'Serviço temporariamente indisponível'
             });
-            if (Object.keys(pontosObj).length > 0) {
-                console.log('📊 Pontos carregados do MongoDB:', pontosObj);
-                res.json(pontosObj);
-                return;
-            }
         }
-
-        // Fallback: arquivo local
-        const pontosLocal = lerDados(PONTOS_FILE);
-        console.log('📁 Usando arquivo local como último recurso');
-        res.json(pontosLocal);
+        
+        const pontosDB = await Pontos.find({});
+        const pontosObj = {};
+        pontosDB.forEach(p => {
+            pontosObj[p.nome.toLowerCase()] = p.pontos;
+        });
+        
+        return res.json(pontosObj);
     } catch (error) {
         console.error('❌ Erro ao carregar pontos:', error.message);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -379,17 +453,19 @@ app.get('/api/pontos', async (req, res) => {
 
 app.get('/api/historico', async (req, res) => {
     try {
-        // Tentar MongoDB primeiro
-        if (mongoose.connection.readyState === 1) {
-            const historicoDB = await Historico.find({}).sort({ data: -1 });
-            console.log('📋 Histórico carregado do MongoDB:', historicoDB.length, 'registros');
-            res.json(historicoDB);
-            return;
+        const mongoStatus = getMongoDBStatus();
+        
+        if (!mongoStatus.connected) {
+            return res.status(503).json({ 
+                error: 'MongoDB não está conectado',
+                status: mongoStatus,
+                message: 'Serviço temporariamente indisponível'
+            });
         }
-
-        // Fallback: arquivo local
-        const historicoLocal = lerDados(HISTORICO_FILE);
-        res.json(Array.isArray(historicoLocal) ? historicoLocal : []);
+        
+        const historicoDB = await Historico.find({}).sort({ data: -1 });
+        console.log('📋 Histórico carregado do MongoDB:', historicoDB.length, 'registros');
+        res.json(historicoDB);
     } catch (error) {
         console.error('❌ Erro ao carregar histórico:', error.message);
         res.status(500).json({ error: 'Erro interno do servidor' });
@@ -434,20 +510,7 @@ app.post('/api/historico',
             }
             
             // Salvar também localmente como backup
-            try {
-                let historico = lerDados(HISTORICO_FILE) || [];
-                historico.push(historicoEntry);
-                
-                // Manter apenas últimas 1000 entradas
-                if (historico.length > 1000) {
-                    historico = historico.slice(-1000);
-                }
-                
-                salvarDados(HISTORICO_FILE, historico);
-                console.log('📁 Histórico salvo localmente:', historicoEntry);
-            } catch (localError) {
-                console.error('❌ Erro ao salvar histórico localmente:', localError);
-            }
+            // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
             
             ResponseHelper.sendSuccess(res, 'Histórico salvo com sucesso', historicoEntry);
             
@@ -465,10 +528,13 @@ app.post('/api/pontos/adicionar',
         try {
             const { nome, pontos, atividade } = req.body;
 
+            let pontosExistentes = null;
+            let novoTotal = 0;
+
             // Tentar MongoDB primeiro
             if (mongoose.connection.readyState === 1) {
                 // Atualizar ou criar pontos no MongoDB
-                const pontosExistentes = await Pontos.findOneAndUpdate(
+                pontosExistentes = await Pontos.findOneAndUpdate(
                     { nome: nome.toLowerCase() },
                     { 
                         $inc: { pontos: pontos },
@@ -481,7 +547,7 @@ app.post('/api/pontos/adicionar',
                     }
                 );
 
-                const novoTotal = pontosExistentes.pontos;
+                novoTotal = pontosExistentes.pontos;
 
                 // Adicionar ao histórico no MongoDB
                 const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
@@ -499,29 +565,21 @@ app.post('/api/pontos/adicionar',
                 await novoRegistro.save();
                 console.log(`✅ MongoDB: +${pontos} pontos para ${nome} (Total: ${novoTotal})`);
             } else {
-                // Fallback para arquivo local se MongoDB não estiver disponível
-                await salvarHistorico({
-                    nome: nome.toLowerCase(),
-                    pontos: pontos,
-                    motivo: atividade,
-                    tipo: 'adicionar',
-                    timestamp: new Date().toISOString()
-                });
+                // MongoDB offline - apenas salvar no histórico local (sem duplicação)
+                console.log(`⚠️ MongoDB offline: +${pontos} pontos para ${nome} (Apenas histórico local)`);
+                
+                // Não salvar no MongoDB histórico quando offline para evitar duplicação
+                // O cliente irá salvar localmente e sincronizar quando MongoDB voltar
+                novoTotal = pontos; // Valor estimado para resposta
             }
-
-            // Backup local (apenas pontos, não histórico)
-            const pontosAtuais = lerDados(PONTOS_FILE);
-            const nomeKey = nome.toLowerCase();
-            pontosAtuais[nomeKey] = (pontosAtuais[nomeKey] || 0) + pontos;
-            salvarDados(PONTOS_FILE, pontosAtuais);
 
             // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
             const dadosParaSincronizar = {
                 tipo: 'adicionar',
-                nome: nomeKey,
+                nome: nome.toLowerCase(),
                 pontos: pontos,
                 atividade: atividade,
-                novoTotal: pontosAtuais[nomeKey],
+                novoTotal: novoTotal,
                 timestamp: new Date().toISOString()
             };
             
@@ -531,7 +589,7 @@ app.post('/api/pontos/adicionar',
 
             // ✨ REFATORADO: Usar ResponseHelper
             return ResponseHelper.sendSuccess(res, 
-                { novoTotal: pontosAtuais[nomeKey] },
+                { novoTotal: novoTotal },
                 `${pontos} pontos adicionados para ${nome}`
             );
         } catch (error) {
@@ -549,10 +607,13 @@ app.post('/api/pontos/remover',
             const { nome, pontos, atividade, motivo } = req.body;
             const atividadeTexto = atividade || motivo; // Aceitar ambos para compatibilidade
 
+            let pontosExistentes = null;
+            let novoTotal = 0;
+
             // Tentar MongoDB primeiro
             if (mongoose.connection.readyState === 1) {
                 // Atualizar pontos no MongoDB
-                const pontosExistentes = await Pontos.findOneAndUpdate(
+                pontosExistentes = await Pontos.findOneAndUpdate(
                     { nome: nome.toLowerCase() },
                     { 
                         $inc: { pontos: -pontos },
@@ -574,6 +635,8 @@ app.post('/api/pontos/remover',
                     pontosExistentes.pontos = 0;
                 }
 
+                novoTotal = pontosExistentes.pontos;
+
                 // Adicionar ao histórico no MongoDB
                 const ultimoHistorico = await Historico.findOne().sort({ id: -1 });
                 const novoId = ultimoHistorico ? ultimoHistorico.id + 1 : 1;
@@ -588,31 +651,23 @@ app.post('/api/pontos/remover',
                 });
 
                 await novoRegistro.save();
-                console.log(`✅ MongoDB: -${pontos} pontos para ${nome} (Total: ${pontosExistentes.pontos})`);
+                console.log(`✅ MongoDB: -${pontos} pontos para ${nome} (Total: ${novoTotal})`);
             } else {
-                // Fallback para arquivo local se MongoDB não estiver disponível
-                await salvarHistorico({
-                    nome: nome.toLowerCase(),
-                pontos: pontos,
-                motivo: atividadeTexto,
-                tipo: 'remover',
-                timestamp: new Date().toISOString()
-            });
-        }
-
-            // Backup local (apenas pontos, não histórico)
-            const pontosAtuais = lerDados(PONTOS_FILE);
-            const nomeKey = nome.toLowerCase();
-            pontosAtuais[nomeKey] = Math.max(0, (pontosAtuais[nomeKey] || 0) - pontos);
-            salvarDados(PONTOS_FILE, pontosAtuais);
+                // MongoDB offline - apenas salvar no histórico local (sem duplicação)
+                console.log(`⚠️ MongoDB offline: -${pontos} pontos para ${nome} (Apenas histórico local)`);
+                
+                // Não salvar no MongoDB histórico quando offline para evitar duplicação
+                // O cliente irá salvar localmente e sincronizar quando MongoDB voltar
+                novoTotal = Math.max(0, pontos); // Valor estimado para resposta
+            }
 
             // 🔄 SINCRONIZAÇÃO EM TEMPO REAL
             const dadosParaSincronizar = {
                 tipo: 'remover',
-                nome: nomeKey,
+                nome: nome.toLowerCase(),
                 pontos: pontos,
                 motivo: atividadeTexto,
-                novoTotal: pontosAtuais[nomeKey],
+                novoTotal: novoTotal,
                 timestamp: new Date().toISOString()
             };
             
@@ -622,7 +677,7 @@ app.post('/api/pontos/remover',
 
             // ✨ REFATORADO: Usar ResponseHelper
             return ResponseHelper.sendSuccess(res, 
-                { novoTotal: pontosAtuais[nomeKey] },
+                { novoTotal: novoTotal },
                 `${pontos} pontos removidos de ${nome}`
             );
         } catch (error) {
@@ -688,11 +743,12 @@ app.post('/api/pontos', async (req, res) => {
                 );
             }
             console.log('📊 Pontos salvos no MongoDB:', pontosNormalizados);
+        } else {
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Backup local com chaves normalizadas
-        salvarDados(PONTOS_FILE, pontosNormalizados);
-        console.log('📁 Pontos salvos localmente:', pontosNormalizados);
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         res.json({ success: true, message: 'Pontos salvos com sucesso!' });
     } catch (error) {
@@ -709,12 +765,12 @@ app.delete('/api/historico/:id', async (req, res) => {
         if (mongoose.connection.readyState === 1) {
             await Historico.deleteOne({ id: id });
             console.log(`✅ MongoDB: Registro ${id} removido do histórico`);
+        } else {
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Backup local
-        const historicoAtual = lerDados(HISTORICO_FILE);
-        const novoHistorico = historicoAtual.filter(item => item.id !== id);
-        salvarDados(HISTORICO_FILE, novoHistorico);
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         res.json({ success: true });
     } catch (error) {
@@ -746,23 +802,18 @@ app.delete('/api/historico', async (req, res) => {
             await Historico.deleteMany({});
             console.log(`✅ MongoDB: ${totalRemovidos} registros removidos do histórico`);
         } else {
-            console.log('⚠️ MongoDB não conectado, limpando apenas arquivo local');
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Backup local - contar e limpar
-        const historicoAtual = lerDados(HISTORICO_FILE);
-        const registrosLocais = historicoAtual.length;
-        if (!totalRemovidos) totalRemovidos = registrosLocais;
-        
-        salvarDados(HISTORICO_FILE, []);
-        console.log(`📁 Arquivo local: ${registrosLocais} registros removidos`);
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         console.log(`🗑️ Histórico completo limpo: ${totalRemovidos} registros removidos, ${logsRemovidos} logs removidos`);
         res.json({ 
             success: true, 
             totalRemovidos: totalRemovidos,
             logsRemovidos: logsRemovidos,
-            registrosLocais: registrosLocais,
+            registrosLocais: 0, // Não há registros locais
             message: `${totalRemovidos} registros e ${logsRemovidos} logs removidos do histórico` 
         });
     } catch (error) {
@@ -793,6 +844,34 @@ app.post('/api/salvar-atividades', async (req, res) => {
         res.json({ success: true, message: 'Atividades salvas com sucesso' });
     } catch (error) {
         console.error('❌ Erro ao salvar atividades:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Endpoint para obter atividades do MongoDB
+app.get('/api/atividades', async (req, res) => {
+    try {
+        console.log('📋 Obtendo atividades do MongoDB...');
+        const todasAtividades = await Atividade.find().sort({ nome: 1 });
+        
+        // Separar atividades por tipo
+        const positivas = todasAtividades.filter(a => a.tipo === 'positiva');
+        const negativas = todasAtividades.filter(a => a.tipo === 'negativa');
+        
+        console.log('📊 Atividades encontradas:', {
+            total: todasAtividades.length,
+            positivas: positivas.length,
+            negativas: negativas.length
+        });
+        
+        res.json({ 
+            success: true, 
+            positivas: positivas,
+            negativas: negativas,
+            total: todasAtividades.length
+        });
+    } catch (error) {
+        console.error('❌ Erro ao obter atividades:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -967,7 +1046,6 @@ app.delete('/api/logs/limpar', async (req, res) => {
 app.get('/api/historico/count', async (req, res) => {
     try {
         let totalMongoDB = 0;
-        let totalLocal = 0;
         let totalAtividades = 0;
         let totalLogs = 0;
 
@@ -979,14 +1057,13 @@ app.get('/api/historico/count', async (req, res) => {
         }
 
         // Contar no arquivo local
-        const historicoLocal = lerDados(HISTORICO_FILE);
-        totalLocal = historicoLocal.length;
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         res.json({
             success: true,
             historico: {
                 mongodb: totalMongoDB,
-                local: totalLocal
+                local: 0 // Não há registros locais
             },
             atividades: {
                 mongodb: totalAtividades
@@ -1008,11 +1085,12 @@ app.post('/api/resetar-pontos', async (req, res) => {
         if (mongoose.connection.readyState === 1) {
             await Pontos.deleteMany({});
             console.log('🗑️ MongoDB: Todos os pontos resetados');
+        } else {
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Resetar local
-        salvarDados(PONTOS_FILE, {});
-        console.log('🗑️ Local: Todos os pontos resetados');
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         res.json({ success: true, message: 'Pontos resetados com sucesso!' });
     } catch (error) {
@@ -1028,13 +1106,12 @@ app.post('/api/limpar-logs-sistema', async (req, res) => {
         if (mongoose.connection.readyState === 1) {
             await Historico.deleteMany({ tipo: 'sistema' });
             console.log('🧹 MongoDB: Logs de sistema removidos do histórico');
+        } else {
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Limpar local
-        const historicoLocal = lerDados(HISTORICO_FILE);
-        const historicoLimpo = historicoLocal.filter(item => item.tipo !== 'sistema');
-        salvarDados(HISTORICO_FILE, historicoLimpo);
-        console.log('🧹 Local: Logs de sistema removidos do histórico');
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         res.json({ success: true, message: 'Logs de sistema removidos do histórico!' });
     } catch (error) {
@@ -1055,7 +1132,7 @@ app.get('/api/status', async (req, res) => {
             localFile: {
                 status: 'sempre disponível',
                 working: true,
-                data: lerDados(PONTOS_FILE)
+                data: 'Não há dados locais' // Não há dados locais
             }
         }
     };
@@ -1102,41 +1179,18 @@ app.post('/api/salvar-criancas', async (req, res) => {
                     console.error(`❌ Erro ao salvar criança ${crianca.nome}:`, mongoError);
                 }
             }
+        } else {
+            return res.status(500).json({ error: 'Erro ao conectar no MongoDB' });
         }
 
         // Também salvar no localStorage como backup
-        const criancasFile = 'data/criancas.json';
-        salvarDados(criancasFile, criancas);
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         // ✨ CORREÇÃO CRÍTICA: Garantir que todas as crianças tenham entradas de pontos
-        const pontosFile = 'data/pontos.json';
-        let pontosData = {};
-        
-        try {
-            if (fs.existsSync(pontosFile)) {
-                pontosData = lerDados(pontosFile);
-            }
-        } catch (error) {
-            console.error('❌ Erro ao carregar pontos existentes:', error);
-            pontosData = {};
-        }
-        
-        // Adicionar pontos para crianças que não têm entrada
-        let pontosAtualizados = false;
-        for (const crianca of criancas) {
-            const nomeKey = crianca.nome.toLowerCase();
-            if (!(nomeKey in pontosData)) {
-                pontosData[nomeKey] = 0;
-                pontosAtualizados = true;
-                console.log(`➕ Criando entrada de pontos para ${nomeKey}: 0`);
-            }
-        }
-        
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
+
         // Salvar pontos atualizados se necessário
-        if (pontosAtualizados) {
-            salvarDados(pontosFile, pontosData);
-            console.log('💾 Pontos atualizados com novas crianças');
-        }
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         console.log('👨‍👩‍👧‍👦 Configurações de crianças salvas:', criancasSalvas.length);
         
@@ -1170,38 +1224,42 @@ app.get('/api/sincronizar-criancas', async (req, res) => {
         // Tentar carregar do MongoDB
         if (mongoose.connection.readyState === 1) {
             try {
-                criancasMongoDB = await Crianca.find({ ativo: true }).sort({ id: 1 });
+                criancasMongoDB = await Crianca.find({}).sort({ id: 1 });
                 console.log('👨‍👩‍👧‍👦 Crianças encontradas no MongoDB:', criancasMongoDB.length);
             } catch (error) {
                 console.error('❌ Erro ao buscar crianças no MongoDB:', error);
             }
         }
 
-        // Sempre tentar carregar do arquivo local
-        try {
-            const criancasFile = 'data/criancas.json';
-            if (fs.existsSync(criancasFile)) {
-                criancasArquivo = lerDados(criancasFile);
-                console.log('👨‍👩‍👧‍👦 Crianças carregadas do arquivo local:', criancasArquivo.length);
-                console.log('🔍 DEBUG - Crianças do arquivo:', criancasArquivo.map(c => c.nome));
-            }
-        } catch (error) {
-            console.error('❌ Erro ao carregar crianças do arquivo:', error);
-        }
-
-        // Mesclar crianças: MongoDB + arquivo local (priorizando arquivo local para conflitos)
+        // Carregar do arquivo local apenas se não há dados no MongoDB
         let criancasSalvas = [...criancasMongoDB];
         
-        // Adicionar crianças do arquivo que não estão no MongoDB
-        criancasArquivo.forEach(criancaArquivo => {
-            const existeNoMongoDB = criancasMongoDB.some(c => c.nome.toLowerCase() === criancaArquivo.nome.toLowerCase());
-            if (!existeNoMongoDB) {
-                criancasSalvas.push(criancaArquivo);
-                console.log(`➕ Adicionando criança do arquivo local: ${criancaArquivo.nome}`);
+        if (criancasMongoDB.length === 0) {
+            try {
+                // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
+                // const criancasFile = 'data/criancas.json';
+                // if (fs.existsSync(criancasFile)) {
+                //     criancasArquivo = lerDados(criancasFile);
+                //     console.log('👨‍👩‍👧‍👦 Crianças carregadas do arquivo local (MongoDB vazio):', criancasArquivo.length);
+                //     console.log('🔍 DEBUG - Crianças do arquivo:', criancasArquivo.map(c => c.nome));
+                    
+                //     // Adicionar crianças do arquivo apenas se não há dados no MongoDB
+                //     criancasArquivo.forEach(criancaArquivo => {
+                //         criancasSalvas.push(criancaArquivo);
+                //         console.log(`➕ Adicionando criança do arquivo local: ${criancaArquivo.nome}`);
+                //     });
+                // }
+            } catch (error) {
+                console.error('❌ Erro ao carregar crianças do arquivo:', error);
             }
-        });
+        } else {
+            console.log('✅ Usando apenas dados do MongoDB (arquivo local ignorado)');
+        }
         
         console.log(`🔗 Total de crianças mescladas: ${criancasSalvas.length} (MongoDB: ${criancasMongoDB.length}, Arquivo: ${criancasArquivo.length})`);
+        
+        // ✨ NOVO: Migrar crianças do arquivo para MongoDB se necessário
+        // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
 
         // Obter pontos atuais
         let pontosData = {};
@@ -1211,7 +1269,7 @@ app.get('/api/sincronizar-criancas', async (req, res) => {
                 pontosData[p.nome.toLowerCase()] = p.pontos;
             });
         } else {
-            pontosData = lerDados(PONTOS_FILE);
+            // Todas as rotas e funções que usavam arquivos locais foram removidas. Apenas MongoDB é utilizado.
         }
 
         // Se há crianças salvas, usar suas configurações
@@ -1236,27 +1294,11 @@ app.get('/api/sincronizar-criancas', async (req, res) => {
             });
             
             // ✨ NOVO: Salvar pontos atualizados se foram adicionadas novas entradas
-            const pontosFile = 'data/pontos.json';
-            salvarDados(pontosFile, pontosData);
+            // const pontosFile = 'data/pontos.json';
+            // salvarDados(pontosFile, pontosData);
         } else {
-            // Fallback: criar crianças baseadas apenas nos pontos (comportamento antigo)
-            let index = 0;
-            for (const [nome, pontos] of Object.entries(pontosData)) {
-                if (nome && nome !== 'testeatlas') {
-                    criancas.push({
-                        id: index + 1,
-                        nome: nome.charAt(0).toUpperCase() + nome.slice(1),
-                        emoji: emojis[index % emojis.length],
-                        cor: {
-                            nome: ['Vermelho', 'Verde', 'Azul', 'Rosa', 'Amarelo', 'Roxo', 'Ciano', 'Laranja'][index % 8],
-                            valor: cores[index % cores.length],
-                            gradiente: `linear-gradient(135deg, ${cores[index % cores.length]} 0%, ${cores[(index + 1) % cores.length]} 100%)`
-                        },
-                        pontos: pontos || 0
-                    });
-                    index++;
-                }
-            }
+            // Não criar crianças dinamicamente - usar apenas crianças cadastradas no MongoDB
+            console.log('⚠️ Nenhuma criança cadastrada no MongoDB - lista vazia');
         }
         
         console.log('👨‍👩‍👧‍👦 Crianças sincronizadas:', criancas);
@@ -1267,83 +1309,7 @@ app.get('/api/sincronizar-criancas', async (req, res) => {
     }
 });
 
-// ✨ NOVO: Endpoint para visualizar histórico de uma criança específica
-app.get('/api/historico/crianca/:nome', async (req, res) => {
-    try {
-        const nome = req.params.nome.toLowerCase();
-        
-        // Buscar registros de histórico da criança
-        const registros = await Historico.find({ nome: nome }).sort({ data: -1 });
-        
-        console.log(`📋 Histórico de ${nome}: ${registros.length} registros encontrados`);
-        
-        res.json({ 
-            success: true, 
-            crianca: nome,
-            total: registros.length,
-            registros: registros
-        });
-    } catch (error) {
-        console.error('❌ Erro ao buscar histórico da criança:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
-    }
-});
-
-// ✨ NOVO: Endpoint para remover histórico de uma criança específica
-app.delete('/api/historico/crianca/:nome', async (req, res) => {
-    try {
-        const nome = req.params.nome.toLowerCase();
-        
-        // Remover todos os registros da criança
-        const resultado = await Historico.deleteMany({ nome: nome });
-        
-        console.log(`🗑️ Histórico de ${nome} removido: ${resultado.deletedCount} registros`);
-        
-        res.json({ 
-            success: true, 
-            crianca: nome,
-            registrosRemovidos: resultado.deletedCount,
-            message: `Histórico de ${nome} removido: ${resultado.deletedCount} registros`
-        });
-    } catch (error) {
-        console.error('❌ Erro ao remover histórico da criança:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
-    }
-});
-
-// ✨ NOVO: Endpoint para limpar histórico órfão
-app.delete('/api/limpar-historico-orfao', async (req, res) => {
-    try {
-        // Obter todas as crianças ativas
-        const criancasAtivas = await Crianca.find({ ativo: true });
-        const nomesAtivos = criancasAtivas.map(c => c.nome.toLowerCase());
-        
-        // Remover histórico de crianças que não existem mais
-        const historicoRemovido = await Historico.deleteMany({
-            nome: { $nin: nomesAtivos }
-        });
-        
-        console.log(`🧹 Histórico órfão limpo: ${historicoRemovido.deletedCount} registros removidos`);
-        res.json({ 
-            success: true, 
-            message: `Histórico limpo: ${historicoRemovido.deletedCount} registros órfãos removidos` 
-        });
-    } catch (error) {
-        console.error('❌ Erro ao limpar histórico órfão:', error);
-        res.status(500).json({ 
-            success: false, 
-            error: error.message 
-        });
-    }
-});
-
-// ✨ NOVO: Endpoints para lembretes das crianças
+// ✨ NOVOS ENDPOINTS: Sincronização de Lembretes
 
 // GET - Buscar todos os lembretes
 app.get('/api/lembretes', async (req, res) => {
@@ -1458,13 +1424,87 @@ app.delete('/api/lembretes/limpar-lidos', async (req, res) => {
     }
 });
 
+// ✨ NOVO: Endpoint para limpar todas as crianças
+app.delete('/api/limpar-todas-criancas', async (req, res) => {
+    try {
+        console.log('🗑️ Limpando todas as crianças do MongoDB...');
+        
+        const resultado = await Crianca.deleteMany({});
+        
+        console.log(`✅ ${resultado.deletedCount} crianças removidas do MongoDB`);
+        
+        res.json({ 
+            success: true, 
+            message: `${resultado.deletedCount} crianças removidas`,
+            removidas: resultado.deletedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao limpar crianças:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// ✨ NOVO: Endpoint para limpar todos os pontos
+app.delete('/api/limpar-todos-pontos', async (req, res) => {
+    try {
+        console.log('🗑️ Limpando todos os pontos do MongoDB...');
+        
+        const resultado = await Pontos.deleteMany({});
+        
+        console.log(`✅ ${resultado.deletedCount} pontos removidos do MongoDB`);
+        
+        res.json({ 
+            success: true, 
+            message: `${resultado.deletedCount} pontos removidos`,
+            removidos: resultado.deletedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao limpar pontos:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
+// ✨ NOVO: Endpoint para limpar todo o histórico
+app.delete('/api/limpar-todo-historico', async (req, res) => {
+    try {
+        console.log('🗑️ Limpando todo o histórico do MongoDB...');
+        
+        const resultado = await Historico.deleteMany({});
+        
+        console.log(`✅ ${resultado.deletedCount} registros de histórico removidos do MongoDB`);
+        
+        res.json({ 
+            success: true, 
+            message: `${resultado.deletedCount} registros de histórico removidos`,
+            removidos: resultado.deletedCount
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao limpar histórico:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: error.message 
+        });
+    }
+});
+
 // ✨ NOVO: Endpoint para remover criança
 app.delete('/api/criancas/:id', async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         
-        // Verificar se a criança existe
-        const crianca = await Crianca.findOne({ id: id, ativo: true });
+        // Verificar se a criança existe (qualquer status)
+        const crianca = await Crianca.findOne({ 
+            id: parseInt(id)
+        });
         if (!crianca) {
             return res.status(404).json({ 
                 success: false, 
@@ -1472,14 +1512,8 @@ app.delete('/api/criancas/:id', async (req, res) => {
             });
         }
         
-        // Marcar como inativa em vez de deletar
-        await Crianca.updateOne(
-            { id: id },
-            { 
-                ativo: false,
-                ultimaAtualizacao: new Date()
-            }
-        );
+        // Excluir completamente do banco de dados
+        await Crianca.deleteOne({ id: parseInt(id) });
         
         // Remover pontos da criança
         await Pontos.deleteOne({ nome: crianca.nome.toLowerCase() });
@@ -1499,13 +1533,13 @@ app.delete('/api/criancas/:id', async (req, res) => {
         });
         
         // ✨ NOVO: Limpar histórico órfão (crianças que não existem mais)
-        const criancasAtivas = await Crianca.find({ ativo: true });
-        const nomesAtivos = criancasAtivas.map(c => c.nome.toLowerCase());
+        const criancasExistentes = await Crianca.find({});
+        const nomesExistentes = criancasExistentes.map(c => c.nome.toLowerCase());
         const historicoOrfaoRemovido = await Historico.deleteMany({
-            nome: { $nin: nomesAtivos }
+            nome: { $nin: nomesExistentes }
         });
         
-        console.log(`🗑️ Criança removida: ${crianca.nome} (ID: ${id})`);
+        console.log(`🗑️ Criança excluída do banco: ${crianca.nome} (ID: ${id})`);
         console.log(`📝 Histórico da criança removido: ${historicoRemovido.deletedCount} registros`);
         console.log(`📋 Logs de sistema removidos: ${logsRemovidos.deletedCount} registros`);
         console.log(`🧹 Histórico órfão removido: ${historicoOrfaoRemovido.deletedCount} registros`);
@@ -1514,7 +1548,7 @@ app.delete('/api/criancas/:id', async (req, res) => {
         
         res.json({ 
             success: true, 
-            message: `Criança ${crianca.nome} removida com sucesso (${historicoRemovido.deletedCount} histórico + ${logsRemovidos.deletedCount} logs removidos)` 
+            message: `Criança ${crianca.nome} excluída do banco com sucesso (${historicoRemovido.deletedCount} histórico + ${logsRemovidos.deletedCount} logs removidos)` 
         });
     } catch (error) {
         console.error('❌ Erro ao remover criança:', error);
@@ -1538,7 +1572,7 @@ app.use(ResponseHelper.errorHandler); // Catch-all errors
 server.listen(PORT, () => {
     console.log('🚀 Servidor rodando na porta', PORT);
     console.log('📱 Acesse: http://localhost:' + PORT);
-    console.log('💾 Armazenamento: MongoDB Atlas + Local Files');
+    console.log('💾 Armazenamento: MongoDB Atlas');
     console.log('🔄 WebSocket: Sincronização em tempo real ativada!');
     console.log('✨ Refatoração DRY: Utilitários carregados!');
 });

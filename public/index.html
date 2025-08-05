@@ -17,6 +17,11 @@
                     <p>Gerenciando os pontos dos meus filhos</p>
                 </div>
                 <div class="header-right">
+                    <!-- Status do servidor -->
+                    <div class="status-container">
+                        <div id="status-indicator" class="status-indicator online"></div>
+                        <span id="status-text" class="status-text online">🟢 Online</span>
+                    </div>
                     <!-- Status WebSocket no canto superior direito -->
                     <div id="websocket-status" class="websocket-status connecting">
                         🔄 Conectando...
@@ -261,13 +266,13 @@
     </div>
 
     <!-- Modal de Configurações -->
-    <div id="modal-configuracoes" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>⚙️ Configurações do Sistema</h2>
-                <button class="modal-close" id="fechar-modal">&times;</button>
+    <div id="modal-configuracoes" class="modal-confirmacao">
+        <div class="modal-confirmacao-content">
+            <div class="modal-confirmacao-header">
+                <h3>⚙️ Configurações do Sistema</h3>
+                <button class="modal-confirmacao-close" id="fechar-modal">&times;</button>
             </div>
-            <div class="modal-body">
+            <div class="modal-confirmacao-body">
                 <div class="config-tabs">
                     <button class="tab-btn active" data-tab="filhos">👥 Filhos</button>
                     <button class="tab-btn" data-tab="pontos">🎯 Atividades</button>
@@ -350,7 +355,7 @@
 
                 <!-- Aba de Backup removida -->
             </div>
-            <div class="modal-footer">
+            <div class="modal-confirmacao-footer">
                 <div class="footer-left">
                     <button id="btn-baixar-log" class="btn btn-primary admin-only">📋 Baixar Log</button>
                     <button id="btn-resetar-pontos" class="btn btn-warning admin-only">🔄 Resetar Pontos</button>
@@ -366,6 +371,23 @@
 
     <!-- Container de Notificações -->
     <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Modal de Confirmação Moderno -->
+    <div id="modal-confirmacao" class="modal-confirmacao">
+        <div class="modal-confirmacao-content">
+            <div class="modal-confirmacao-header">
+                <h3 id="modal-confirmacao-titulo">⚠️ Confirmação</h3>
+                <button class="modal-confirmacao-close" id="modal-confirmacao-close">&times;</button>
+            </div>
+            <div class="modal-confirmacao-body">
+                <p id="modal-confirmacao-mensagem">Tem certeza que deseja continuar?</p>
+            </div>
+            <div class="modal-confirmacao-footer">
+                <button class="btn btn-secondary" id="modal-confirmacao-cancelar">Cancelar</button>
+                <button class="btn btn-danger" id="modal-confirmacao-confirmar">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Socket.IO Client -->
     <script src="/socket.io/socket.io.js"></script>

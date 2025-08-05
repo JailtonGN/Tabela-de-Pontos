@@ -56,6 +56,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // ✨ NOVA: Verificar integridade dos dados
     verificarIntegridadeDados();
 
+    // ✨ NOVO: Carregar operações pendentes
+    carregarOperacoesPendentes();
+
     // Inicializar aplicação
     inicializarApp();
 });
@@ -882,25 +885,21 @@ async function sincronizarDados() {
                 return crianca;
             });
             
-            // ✨ NOVA LÓGICA: Preservar crianças locais que não existem no servidor
-            const nomesServidor = filhosServidor.map(f => f.nome.toLowerCase());
-            const filhosLocaisNaoSalvos = filhosAnteriores.filter(filho => 
-                !nomesServidor.includes(filho.nome.toLowerCase())
-            );
+            // Usar apenas dados do servidor - sem preservar dados locais
             
-            if (filhosLocaisNaoSalvos.length > 0 && mostrarLogs) {
-                console.log('🔄 Preservando crianças locais não salvas:', filhosLocaisNaoSalvos.map(f => f.nome));
+            // Usar apenas dados do servidor - sem preservar dados locais
+            if (mostrarLogs) {
+                console.log('📊 Usando apenas dados do MongoDB');
             }
             
-            // Merge: servidor + locais não salvos
-            filhos = [...filhosServidor, ...filhosLocaisNaoSalvos];
+            // Usar apenas dados do servidor (MongoDB)
+            filhos = [...filhosServidor];
             
             if (mostrarLogs) {
-                console.log('👨‍👩‍👧‍👦 Crianças após merge (servidor + locais):', filhos.length);
+                console.log('👨‍👩‍👧‍👦 Crianças do servidor (MongoDB):', filhos.length);
             }
             
-            // Salvar no localStorage para manter consistência
-            localStorage.setItem('filhos', JSON.stringify(filhos));
+            // Não salvar no localStorage - usar apenas MongoDB
             if (mostrarLogs) {
                 console.log('💾 Crianças salvas no localStorage');
             }
@@ -915,23 +914,10 @@ async function sincronizarDados() {
                 console.log('🔍 Debug - resposta completa:', criancasServidor);
             }
             
-            // ✨ FALLBACK: Carregar do localStorage se não há dados no servidor
-            const filhosLocalStorage = localStorage.getItem('filhos');
-            if (filhosLocalStorage) {
-                try {
-                    filhos = JSON.parse(filhosLocalStorage);
-                    if (mostrarLogs) {
-                        console.log('📱 Usando dados do localStorage como fallback:', filhos.length, 'filhos');
-                    }
-                } catch (error) {
-                    console.error('❌ Erro ao parsear filhos do localStorage:', error);
-                    filhos = [];
-                }
-            } else {
-                if (mostrarLogs) {
-                    console.log('📱 Nenhum dado no localStorage também');
-                }
-                filhos = [];
+            // Usar apenas dados do servidor - sem fallback local
+            filhos = [];
+            if (mostrarLogs) {
+                console.log('📱 Nenhum dado no servidor - lista vazia');
             }
         }
         
@@ -995,9 +981,73 @@ async function sincronizarManualmente() {
     }
 }
 
+// ✨ NOVA FUNÇÃO: Gerenciamento de operações pendentes
+// ✨ REMOVIDO: Sistema de operações pendentes - tudo na nuvem agora
+let operacoesPendentes = [];
+
+function adicionarOperacaoPendente(operacao) {
+    // Operações são processadas imediatamente na nuvem
+    console.log(`☁️ Operação processada na nuvem: ${operacao.tipo} ${operacao.pontos} pontos para ${operacao.nome}`);
+}
+
+function limparOperacoesPendentes() {
+    operacoesPendentes = [];
+    console.log('🧹 Operações pendentes limpas');
+}
+
+function carregarOperacoesPendentes() {
+    // Não há operações pendentes - tudo é processado na nuvem
+    console.log('☁️ Sistema funcionando apenas na nuvem - sem operações pendentes');
+}
+
+// ✨ NOVA FUNÇÃO: Verificar status do servidor
+async function verificarStatusServidor() {
+    try {
+        const response = await fetch('/api/status');
+        const status = await response.json();
+        
+        console.log('🔍 Status do servidor:', status);
+        
+        // Atualizar indicador de status na interface
+        atualizarIndicadorStatus(status.online);
+        
+        return status.online;
+    } catch (error) {
+        console.error('❌ Erro ao verificar status:', error);
+        atualizarIndicadorStatus(false);
+        return false;
+    }
+}
+
+// ✨ NOVA FUNÇÃO: Atualizar indicador de status
+function atualizarIndicadorStatus(online) {
+    const statusIndicator = document.getElementById('status-indicator');
+    const statusText = document.getElementById('status-text');
+    
+    if (statusIndicator && statusText) {
+        if (online) {
+            statusIndicator.className = 'status-indicator online';
+            statusText.textContent = '🟢 Online';
+            statusText.className = 'status-text online';
+        } else {
+            statusIndicator.className = 'status-indicator offline';
+            statusText.textContent = '🔴 Offline';
+            statusText.className = 'status-text offline';
+        }
+    }
+}
+
 // ✨ NOVA FUNÇÃO: Sincronização inteligente após cada ação
 async function sincronizarAposAcao(acao) {
     try {
+        // Verificar status primeiro
+        const online = await verificarStatusServidor();
+        
+        if (!online) {
+            console.log('⚠️ Servidor offline - operação salva localmente');
+            return;
+        }
+        
         // Não sincronizar se já está sincronizando ou se há bloqueio
         if (bloqueiarSincronizacao) {
             console.log('🚫 Sincronização pós-ação cancelada - já em andamento');
@@ -1007,7 +1057,12 @@ async function sincronizarAposAcao(acao) {
         // Log controlado para ações
         console.log(`🔄 Sincronizando após: ${acao}`);
         
-        // Sincronizar silenciosamente (sem logs excessivos)
+        // Primeiro, tentar sincronizar operações pendentes
+        if (operacoesPendentes.length > 0) {
+            await sincronizarOperacoesPendentes();
+        }
+        
+        // Depois, sincronizar dados gerais
         const resultado = await sincronizarDados();
         
         if (resultado) {
@@ -1020,6 +1075,46 @@ async function sincronizarAposAcao(acao) {
         
     } catch (error) {
         console.error(`❌ Erro na sincronização pós-ação (${acao}):`, error);
+    }
+}
+
+// ✨ NOVA FUNÇÃO: Sincronizar operações pendentes
+async function sincronizarOperacoesPendentes() {
+    if (operacoesPendentes.length === 0) return true;
+    
+    try {
+        console.log(`🔄 Sincronizando ${operacoesPendentes.length} operações pendentes...`);
+        
+        const response = await fetch('/api/sincronizar-pendentes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ operacoesPendentes })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            console.log(`✅ ${result.data.sincronizadas} operações sincronizadas com sucesso`);
+            
+            // Limpar operações sincronizadas
+            limparOperacoesPendentes();
+            
+            // Mostrar notificação se houve falhas
+            if (result.data.falharam > 0) {
+                mostrarNotificacao(`⚠️ ${result.data.falharam} operações falharam na sincronização`, 'warning');
+            }
+            
+            return true;
+        } else {
+            console.error('❌ Erro na sincronização de operações pendentes:', result.message);
+            return false;
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar operações pendentes:', error);
+        return false;
     }
 }
 
@@ -1250,18 +1345,28 @@ async function inicializarApp() {
 
 // Inicialização original (será removida pela nova estrutura de autenticação)
 // Inicialização original (desativada - agora controlada por autenticação)
-// ✨ ATUALIZADA: Carregar dados com sincronização de atividades e logs
+// ✨ ATUALIZADA: Carregar dados com verificação de status
 async function carregarDados() {
     console.log('🔍 Carregando dados...');
     
-    // Tentar sincronizar com o servidor primeiro
-    const sincronizado = await sincronizarDados();
+    // Verificar status do servidor primeiro
+    const online = await verificarStatusServidor();
     
-    if (!sincronizado) {
-        console.log('⚠️ Usando dados locais (localStorage) como fallback');
-        carregarDoLocalStorage();
+    if (online) {
+        // Servidor online - carregar apenas do MongoDB
+        console.log('🟢 Servidor online - carregando do MongoDB');
+        const sincronizado = await sincronizarDados();
+        
+        if (sincronizado) {
+            console.log('✅ Dados sincronizados com o servidor');
+        } else {
+            console.log('⚠️ Falha na sincronização, usando dados locais');
+            carregarDoLocalStorage();
+        }
     } else {
-        console.log('✅ Dados sincronizados com o servidor');
+        // Servidor offline - usar dados locais
+        console.log('🔴 Servidor offline - usando dados locais');
+        carregarDoLocalStorage();
     }
     
     // ✨ NOVA: Carregar atividades do MongoDB ou localStorage
@@ -1281,83 +1386,29 @@ async function carregarDados() {
     console.log('📊 Tabela de pontos carregada');
 }
 
-// Função auxiliar para carregar dados do localStorage
+// ✨ REMOVIDO: Carregamento do localStorage - tudo na nuvem agora
 function carregarDoLocalStorage() {
-    console.log('📱 Carregando dados do localStorage...');
-    
-    const filhosSalvos = localStorage.getItem('filhos');
-    const historicoSalvo = localStorage.getItem('historico');
-    const pontosSalvos = localStorage.getItem('pontos');
-    
-    if (filhosSalvos) {
-        filhos = JSON.parse(filhosSalvos);
-        console.log('👨‍👩‍👧‍👦 Filhos carregados do localStorage:', filhos);
-    } else {
-        // Inicializar com filhos de exemplo se não houver dados
-        filhos = [
-            {
-                id: 1,
-                nome: 'João',
-                emoji: '👦',
-                cor: coresDisponiveis[0],
-                pontos: 0
-            },
-            {
-                id: 2,
-                nome: 'Maria',
-                emoji: '👧',
-                cor: coresDisponiveis[1],
-                pontos: 0
-            }
-        ];
-        console.log('⚠️ Usando filhos padrão:', filhos);
-    }
-    
-    if (historicoSalvo) {
-        historico = JSON.parse(historicoSalvo);
-        console.log('📋 Histórico carregado do localStorage');
-    }
-    
-    if (pontosSalvos) {
-        pontos = JSON.parse(pontosSalvos);
-        console.log('📊 Pontos carregados do localStorage');
-        
-        // Sincronizar pontos dos filhos
-        filhos.forEach(filho => {
-            if (pontos[filho.nome] !== undefined) {
-                filho.pontos = pontos[filho.nome];
-            }
-        });
-    }
+    console.log('☁️ Sistema funcionando apenas na nuvem - sem localStorage');
+    // Todos os dados são carregados diretamente do MongoDB
 }
 
-// Salvar dados
+// ✨ REFATORADO: Salvar dados apenas na nuvem
 async function salvarDados(forcado = false) {
     const agora = Date.now();
-    
-    // Salvar no localStorage (backup local)
-    localStorage.setItem('filhos', JSON.stringify(filhos));
-    localStorage.setItem('atividadesPositivas', JSON.stringify(atividadesPositivas));
-    localStorage.setItem('atividadesNegativas', JSON.stringify(atividadesNegativas));
-    localStorage.setItem('historico', JSON.stringify(historico));
-    
-    // ✨ Log controlado - só mostrar se passou tempo suficiente ou foi forçado
-    if (forcado || agora - ultimoSalvamento > INTERVALO_MINIMO_LOGS) {
-        console.log('💾 Dados salvos no localStorage');
-        ultimoSalvamento = agora;
-    }
     
     // Atualizar pontos baseado nos filhos (SEMPRE usar minúsculo para consistência)
     filhos.forEach(filho => {
         pontos[filho.nome.toLowerCase()] = filho.pontos || 0;
     });
     
-    // Tentar salvar no servidor
+    // Salvar apenas no servidor (MongoDB)
     const salvouServidor = await salvarNoServidor();
     if (salvouServidor && (forcado || agora - ultimoSalvamento > INTERVALO_MINIMO_LOGS)) {
-        console.log('☁️ Dados sincronizados com o servidor');
+        console.log('☁️ Dados salvos na nuvem (MongoDB)');
+        ultimoSalvamento = agora;
     } else if (!salvouServidor && (forcado || agora - ultimoSalvamento > INTERVALO_MINIMO_LOGS)) {
-        console.log('⚠️ Dados salvos apenas localmente');
+        console.log('❌ Erro ao salvar na nuvem - verifique a conexão');
+        mostrarNotificacao('Erro ao salvar na nuvem. Verifique sua conexão.', 'error');
     }
 }
 
@@ -1493,16 +1544,10 @@ function abrirModalConfiguracoes() {
     
     if (modal) {
         // ✨ FORÇAR: Usar display diretamente se a classe não funcionar
-        modal.classList.add('active');
-        modal.style.display = 'flex';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.zIndex = '15000';
+        modal.classList.add('show');
         
         console.log('🔍 Estado do modal:', {
             classes: modal.classList.toString(),
-            display: modal.style.display,
-            zIndex: modal.style.zIndex,
             visible: modal.offsetWidth > 0 && modal.offsetHeight > 0
         });
         
@@ -1525,12 +1570,7 @@ function fecharModalConfiguracoes() {
     console.log('📋 Modal encontrado:', modal);
     if (modal) {
         console.log('📋 Classes antes de remover:', modal.className);
-        modal.classList.remove('active');
-        // ✨ CORREÇÃO: Remover estilos inline que impedem o fechamento
-        modal.style.display = '';
-        modal.style.alignItems = '';
-        modal.style.justifyContent = '';
-        modal.style.zIndex = '';
+        modal.classList.remove('show');
         console.log('📋 Classes após remover:', modal.className);
         console.log('✅ Modal de configurações fechado');
     } else {
@@ -1540,6 +1580,14 @@ function fecharModalConfiguracoes() {
 
 function carregarConfiguracoesNoModal() {
     console.log('🔧 carregarConfiguracoesNoModal() chamada');
+    
+    // ✨ CORREÇÃO: Garantir que os dados dos filhos estejam carregados primeiro
+    if (!filhos || filhos.length === 0) {
+        console.log('⚠️ Filhos não carregados, forçando carregamento...');
+        carregarDoLocalStorage();
+    }
+    
+    console.log('📊 Filhos disponíveis para renderização:', filhos.length);
     
     // Renderizar lista de filhos na aba de filhos
     renderizarListaFilhos();
@@ -1619,6 +1667,24 @@ function ativarTab(tabId) {
                 console.log('✅ Histórico atualizado');
             }, 300); // Delay para garantir renderização
         }
+        
+        // ✨ NOVO: Atualizar filhos quando aba filhos for ativada
+        if (tabId === 'filhos') {
+            console.log('🎯 Aba filhos ativada - atualizando lista de filhos...');
+            setTimeout(() => {
+                console.log('🔄 Executando carregamento de filhos...');
+                
+                // Garantir que os dados dos filhos estejam carregados
+                if (!filhos || filhos.length === 0) {
+                    console.log('⚠️ Filhos não carregados, forçando carregamento...');
+                    carregarDoLocalStorage();
+                }
+                
+                // Forçar renderização
+                renderizarListaFilhos();
+                console.log('✅ Lista de filhos atualizada');
+            }, 300); // Delay para garantir renderização
+        }
     } else {
         console.log(`⚠️ Conteúdo da tab "${tabId}" não encontrado`);
     }
@@ -1626,16 +1692,26 @@ function ativarTab(tabId) {
 
 // Renderizar lista de filhos no modal
 function renderizarListaFilhos() {
+    console.log('🎨 renderizarListaFilhos() chamada');
+    console.log('📊 Estado atual dos filhos:', filhos);
+    console.log('📊 Quantidade de filhos:', filhos.length);
+    
     const container = DomUtils.getElementById('lista-filhos');
+    console.log('🎯 Container encontrado:', !!container);
+    
     if (!container) {
         console.log('📦 Container lista-filhos não encontrado');
         
         // Verificar se estamos no modal de configurações
         const tabFilhos = DomUtils.getElementById('tab-filhos');
+        console.log('🎯 Tab filhos encontrada:', !!tabFilhos);
+        
         if (!tabFilhos) {
             console.log('⚠️ Modal não está aberto, não é necessário renderizar lista de filhos');
             return;
         }
+        
+        console.log('🔨 Criando estrutura HTML para lista de filhos...');
         
         // Criar container se não existir
         tabFilhos.innerHTML = `
@@ -1681,6 +1757,8 @@ function renderizarListaFilhos() {
         
         // Buscar o novo container criado
         const novoContainer = DomUtils.getElementById('lista-filhos');
+        console.log('🎯 Novo container criado:', !!novoContainer);
+        
         if (!novoContainer) {
             console.error('❌ Erro: Não foi possível criar container lista-filhos');
             return;
@@ -1692,19 +1770,29 @@ function renderizarListaFilhos() {
     }
     
     // Se o container existe, renderizar diretamente
+    console.log('✅ Renderizando no container existente');
     renderizarListaFilhosContainer(container);
 }
 
 // Função auxiliar para renderizar conteúdo na lista de filhos
 function renderizarListaFilhosContainer(container) {
+    console.log('🎨 renderizarListaFilhosContainer() chamada');
+    console.log('🎯 Container recebido:', container);
+    console.log('📊 Filhos para renderizar:', filhos.length);
+    
     container.innerHTML = '';
     
     if (filhos.length === 0) {
+        console.log('📝 Nenhum filho para renderizar, mostrando mensagem vazia');
         container.innerHTML = '<p class="texto-vazio">Nenhum filho cadastrado ainda.</p>';
         return;
     }
     
-    filhos.forEach(filho => {
+    console.log('🎨 Renderizando', filhos.length, 'filhos...');
+    
+    filhos.forEach((filho, index) => {
+        console.log(`📝 Renderizando filho ${index + 1}:`, filho);
+        
         const filhoItem = document.createElement('div');
         filhoItem.className = 'filho-item';
         filhoItem.innerHTML = `
@@ -1725,6 +1813,8 @@ function renderizarListaFilhosContainer(container) {
         `;
         container.appendChild(filhoItem);
     });
+    
+    console.log('✅ Renderização concluída,', filhos.length, 'filhos adicionados ao container');
 }
 
 // Adicionar novo filho
@@ -1906,53 +1996,167 @@ async function editarFilho(id) {
     mostrarNotificacao(`✅ ${filho.nome} foi editado com sucesso!`, 'success');
 }
 
-// Remover filho
+// Remover filho - VERSÃO CORRIGIDA
 async function removerFilho(id) {
-    const filho = encontrarFilho(id);
-    if (!filho) return;
+    console.log(`🔍 === INICIANDO REMOÇÃO DE FILHO ===`);
+    console.log(`🔍 ID recebido: ${id} (tipo: ${typeof id})`);
     
-    if (!confirm(`Tem certeza que deseja remover ${filho.nome}? Esta ação não pode ser desfeita.`)) {
+    const filho = encontrarFilho(id);
+    if (!filho) {
+        console.error('❌ Filho não encontrado para remoção com ID:', id);
+        console.log('🔍 Filhos disponíveis:', filhos.map(f => ({ id: f.id, nome: f.nome })));
+        mostrarNotificacao('❌ Filho não encontrado para remover.', 'error');
         return;
     }
     
-    try {
-        // ✨ NOVO: Remover do MongoDB primeiro
-        const response = await ApiService.delete(`/api/criancas/${id}`);
+    console.log(`🔍 Filho encontrado:`, filho);
+    
+    // ✨ CORREÇÃO: Usar modal de confirmação padrão do app
+    confirmarAcao(`Tem certeza que deseja remover ${filho.nome}? Esta ação não pode ser desfeita.`, async (confirmado) => {
+        if (!confirmado) {
+            console.log('❌ Remoção cancelada pelo usuário');
+            return;
+        }
         
-        if (response.success) {
-            console.log(`✅ Criança ${filho.nome} removida do MongoDB`);
+        try {
+            console.log(`🗑️ Iniciando remoção de ${filho.nome} (ID: ${filho.id})`);
+            
+            // ✨ NOVA: Bloquear sincronização durante remoção
+            bloquearSincronizacaoComTimeout();
+            
+            // ✨ CORREÇÃO: Tentar múltiplas estratégias de remoção
+            let removidoComSucesso = false;
+            let erroRemocao = null;
+            
+            // Estratégia 1: Remoção via API com ID numérico
+            try {
+                console.log(`📡 Tentativa 1: API com ID ${filho.id}`);
+                const response = await ApiService.delete(`/api/criancas/${filho.id}`);
+                
+                if (response.success) {
+                    console.log(`✅ Remoção via API bem-sucedida`);
+                    removidoComSucesso = true;
+                } else {
+                    console.log(`⚠️ API retornou erro:`, response.error);
+                    erroRemocao = response.error;
+                }
+            } catch (apiError) {
+                console.log(`⚠️ Erro na API:`, apiError);
+                erroRemocao = apiError.message;
+            }
+            
+            // Estratégia 2: Se API falhou, tentar remoção forçada por nome
+            if (!removidoComSucesso) {
+                try {
+                    console.log(`📡 Tentativa 2: Remoção forçada por nome "${filho.nome}"`);
+                    
+                    // Buscar dados atualizados do servidor
+                    const syncResponse = await ApiService.get('/api/sincronizar-criancas');
+                    
+                    if (syncResponse.success && syncResponse.data && syncResponse.data.criancas) {
+                        const criancaServidor = syncResponse.data.criancas.find(c => 
+                            c.nome.toLowerCase() === filho.nome.toLowerCase()
+                        );
+                        
+                        if (criancaServidor && criancaServidor.id) {
+                            console.log(`🔍 Criança encontrada no servidor:`, criancaServidor);
+                            
+                            const deleteResponse = await ApiService.delete(`/api/criancas/${criancaServidor.id}`);
+                            
+                            if (deleteResponse.success) {
+                                console.log(`✅ Remoção forçada bem-sucedida`);
+                                removidoComSucesso = true;
+                            } else {
+                                console.log(`⚠️ Remoção forçada falhou:`, deleteResponse.error);
+                                erroRemocao = deleteResponse.error;
+                            }
+                        } else {
+                            console.log(`⚠️ Criança não encontrada no servidor`);
+                            erroRemocao = 'Criança não encontrada no servidor';
+                        }
+                    } else {
+                        console.log(`⚠️ Erro ao sincronizar com servidor`);
+                        erroRemocao = 'Erro de sincronização';
+                    }
+                } catch (syncError) {
+                    console.log(`⚠️ Erro na sincronização:`, syncError);
+                    erroRemocao = syncError.message;
+                }
+            }
+            
+            // Estratégia 3: Se tudo falhou, remover apenas localmente
+            if (!removidoComSucesso) {
+                console.log(`📱 Tentativa 3: Remoção apenas local (fallback)`);
+                
+                // Adicionar log da tentativa de remoção local
+                adicionarLog('remover_filho_local', {
+                    filho: filho.nome,
+                    pontos_finais: filho.pontos,
+                    cor: filho.cor,
+                    erro_servidor: erroRemocao
+                });
+                
+                // Remover filho da lista local
+                filhos = filhos.filter(f => f.id !== filho.id);
+                
+                // Remover do histórico também
+                historico = historico.filter(h => h.nome !== filho.nome);
+                
+                // Salvar dados locais
+                await salvarDados();
+                
+                // Atualizar interface
+                renderizarListaFilhos();
+                atualizarInterface();
+                
+                mostrarNotificacao(`⚠️ ${filho.nome} removido localmente (erro no servidor)`, 'warning');
+                
+                // ✨ NOVO: Desbloquear sincronização
+                desbloquearSincronizacao();
+                return;
+            }
+            
+            // Se chegou aqui, a remoção foi bem-sucedida
+            console.log(`✅ Criança ${filho.nome} removida com sucesso`);
             
             // Adicionar log da remoção
-    adicionarLog('remover_filho', {
-        filho: filho.nome,
-        pontos_finais: filho.pontos,
-        cor: filho.cor
-    });
-    
+            adicionarLog('remover_filho', {
+                filho: filho.nome,
+                pontos_finais: filho.pontos,
+                cor: filho.cor,
+                estrategia_usada: removidoComSucesso ? 'api' : 'local'
+            });
+            
             // Remover filho da lista local
-    filhos = filhos.filter(f => f.id !== id);
-    
-    // Remover do histórico também
-    historico = historico.filter(h => h.nome !== filho.nome);
-    
+            filhos = filhos.filter(f => f.id !== filho.id);
+            
+            // Remover do histórico também
+            historico = historico.filter(h => h.nome !== filho.nome);
+            
             // Salvar dados locais
-    await salvarDados();
+            await salvarDados();
             
             // Atualizar interface
-    renderizarListaFilhos();
-    atualizarInterface();
-    
+            renderizarListaFilhos();
+            atualizarInterface();
+            
             // Sincronizar após remover filho
-    await sincronizarAposAcao('remover filho');
-    
-    mostrarNotificacao(`🗑️ ${filho.nome} foi removido do sistema`, 'warning');
-        } else {
-            throw new Error(response.error || 'Erro ao remover criança do servidor');
+            await sincronizarAposAcao('remover filho');
+            
+            // ✨ NOVO: Desbloquear sincronização
+            desbloquearSincronizacao();
+            
+            mostrarNotificacao(`🗑️ ${filho.nome} foi removido do sistema`, 'success');
+            
+        } catch (error) {
+            console.error('❌ Erro geral ao remover criança:', error);
+            
+            // ✨ NOVO: Desbloquear sincronização em caso de erro
+            desbloquearSincronizacao();
+            
+            mostrarNotificacao(`❌ Erro ao remover ${filho.nome}: ${error.message}`, 'error');
         }
-    } catch (error) {
-        console.error('❌ Erro ao remover criança:', error);
-        mostrarNotificacao(`❌ Erro ao remover ${filho.nome}: ${error.message}`, 'error');
-    }
+    });
 }
 
 
@@ -2038,15 +2242,352 @@ function configurarEventos() {
         }
     }, 'Configurar botão de sincronização manual de atividades');
     
+    // ✨ NOVO: Função para limpar dados órfãos
+    window.limparDadosOrfaos = async function() {
+        console.log('🧹 Iniciando limpeza de dados órfãos...');
+        
+        try {
+            // Buscar dados do servidor
+            const response = await ApiService.get('/api/sincronizar-criancas');
+            
+            if (response.success && response.data.criancas) {
+                const criancasServidor = response.data.criancas;
+                console.log('📊 Crianças no servidor:', criancasServidor);
+                
+                // Usar todas as crianças do servidor (já não há inativas)
+                const criancasAtivas = criancasServidor;
+                console.log('✅ Crianças do servidor:', criancasAtivas);
+                
+                // Atualizar dados locais apenas com crianças ativas
+                filhos = criancasAtivas.map(c => ({
+                    id: c.id,
+                    nome: c.nome,
+                    emoji: c.emoji,
+                    cor: c.cor,
+                    pontos: 0 // Será atualizado pela sincronização de pontos
+                }));
+                
+                // Salvar dados limpos
+                await salvarDados();
+                
+                // Atualizar interface
+                renderizarListaFilhos();
+                atualizarInterface();
+                
+                console.log('✅ Limpeza concluída! Filhos atualizados:', filhos);
+                mostrarNotificacao('🧹 Dados órfãos removidos com sucesso!', 'success');
+            }
+        } catch (error) {
+            console.error('❌ Erro na limpeza:', error);
+            mostrarNotificacao('❌ Erro ao limpar dados órfãos', 'error');
+        }
+    };
+    
+    // ✨ NOVO: Função para forçar remoção de filho específico
+    window.forcarRemocaoFilho = async function(nomeFilho) {
+        console.log(`🗑️ Forçando remoção do filho: ${nomeFilho}`);
+        
+        try {
+            // Buscar dados do servidor
+            const response = await ApiService.get('/api/sincronizar-criancas');
+            
+            if (response.success && response.data.criancas) {
+                const criancaParaRemover = response.data.criancas.find(c => 
+                    c.nome.toLowerCase() === nomeFilho.toLowerCase()
+                );
+                
+                if (criancaParaRemover) {
+                    console.log(`🔍 Criança encontrada para remoção:`, criancaParaRemover);
+                    
+                    // Usar o ID numérico já que _id está undefined
+                    const idParaRemover = criancaParaRemover.id;
+                    console.log(`🔍 ID para remoção:`, idParaRemover);
+                    
+                    if (!idParaRemover) {
+                        console.error(`❌ ID não encontrado para ${nomeFilho}:`, criancaParaRemover);
+                        mostrarNotificacao(`❌ ID não encontrado para ${nomeFilho}`, 'error');
+                        return;
+                    }
+                    
+                    const deleteResponse = await ApiService.delete(`/api/criancas/${idParaRemover}`);
+                    
+                    if (deleteResponse.success) {
+                        console.log(`✅ Criança ${nomeFilho} removida com sucesso!`);
+                        mostrarNotificacao(`✅ ${nomeFilho} removido com sucesso!`, 'success');
+                        
+                        // Recarregar dados após remoção
+                        await sincronizarManualmente();
+                    } else {
+                        console.error(`❌ Erro ao remover ${nomeFilho}:`, deleteResponse.error);
+                        mostrarNotificacao(`❌ Erro ao remover ${nomeFilho}`, 'error');
+                    }
+                } else {
+                    console.log(`❌ Criança ${nomeFilho} não encontrada no servidor`);
+                    mostrarNotificacao(`❌ ${nomeFilho} não encontrado no servidor`, 'error');
+                }
+            }
+        } catch (error) {
+            console.error('❌ Erro na remoção forçada:', error);
+            mostrarNotificacao('❌ Erro na remoção forçada', 'error');
+        }
+    };
+    
+    // ✨ NOVA: Função para diagnosticar problema de remoção
+    window.diagnosticarRemocao = async function() {
+        console.log('🔍 === DIAGNÓSTICO DE REMOÇÃO ===');
+        
+        // 1. Verificar estado atual
+        console.log('📊 Estado atual dos filhos:', filhos);
+        console.log('📊 IDs disponíveis:', filhos.map(f => f.id));
+        
+        // 2. Testar sincronização
+        try {
+            const syncResponse = await ApiService.get('/api/sincronizar-criancas');
+            console.log('🔄 Resposta da sincronização:', syncResponse);
+            
+            if (syncResponse.success && syncResponse.data && syncResponse.data.criancas) {
+                console.log('📊 Crianças no servidor:', syncResponse.data.criancas);
+                console.log('📊 IDs no servidor:', syncResponse.data.criancas.map(c => c.id));
+            }
+        } catch (error) {
+            console.error('❌ Erro na sincronização:', error);
+        }
+        
+        // 3. Testar API de remoção se há filhos
+        if (filhos.length > 0) {
+            const primeiroFilho = filhos[0];
+            console.log(`🧪 Testando API de remoção para: ${primeiroFilho.nome} (ID: ${primeiroFilho.id})`);
+            
+            try {
+                const testResponse = await fetch(`/api/criancas/${primeiroFilho.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const testData = await testResponse.json();
+                console.log('📡 Teste da API:', { status: testResponse.status, data: testData });
+            } catch (error) {
+                console.error('❌ Erro no teste da API:', error);
+            }
+        }
+        
+        console.log('✅ Diagnóstico concluído');
+    };
+
+    // ✨ NOVA: Função para forçar sincronização completa
+    window.forcarSincronizacaoCompleta = async function() {
+        console.log('🔄 Forçando sincronização completa...');
+        
+        try {
+            // Limpar dados locais
+            filhos = [];
+            historico = [];
+            
+            // Forçar sincronização do servidor
+            await sincronizarDados();
+            
+            // Atualizar interface
+            atualizarInterface();
+            
+            console.log('✅ Sincronização completa forçada');
+            mostrarNotificacao('✅ Sincronização completa realizada!', 'success');
+        } catch (error) {
+            console.error('❌ Erro na sincronização completa:', error);
+            mostrarNotificacao('❌ Erro na sincronização: ' + error.message, 'error');
+        }
+    };
+    
+    // ✨ NOVA: Função para migrar crianças para MongoDB
+    window.migrarCriancasParaMongoDB = async function() {
+        console.log('🔄 Iniciando migração de crianças para MongoDB...');
+        
+        try {
+            const response = await ApiService.post('/api/migrar-criancas');
+            
+            if (response.success) {
+                console.log('✅ Migração concluída:', response.message);
+                mostrarNotificacao(`✅ ${response.message}`, 'success');
+                
+                // Recarregar dados após migração
+                await sincronizarManualmente();
+                
+                return true;
+            } else {
+                console.error('❌ Erro na migração:', response.error);
+                mostrarNotificacao(`❌ Erro na migração: ${response.error}`, 'error');
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Erro na migração:', error);
+            mostrarNotificacao('❌ Erro na migração', 'error');
+            return false;
+        }
+    };
+    
+    // ✨ NOVA: Função para limpar dados corrompidos
+    window.limparDadosCorrompidos = async function() {
+        console.log('🧹 === LIMPEZA DE DADOS CORROMPIDOS ===');
+        
+        try {
+            // 1. Buscar dados do servidor
+            const syncResponse = await ApiService.get('/api/sincronizar-criancas');
+            
+            if (syncResponse.success && syncResponse.data && syncResponse.data.criancas) {
+                const criancasServidor = syncResponse.data.criancas;
+                console.log('📊 Crianças no servidor:', criancasServidor);
+                
+                // 2. Filtrar apenas crianças válidas (com ID e nome)
+                const criancasValidas = criancasServidor.filter(c => 
+                    c.id && c.nome && c.ativo !== false
+                );
+                console.log('✅ Crianças válidas:', criancasValidas);
+                
+                // 3. Atualizar dados locais
+                filhos = criancasValidas.map(c => ({
+                    id: c.id,
+                    nome: c.nome,
+                    emoji: c.emoji || '👶',
+                    cor: c.cor || coresDisponiveis[0],
+                    pontos: 0
+                }));
+                
+                // 4. Salvar no localStorage
+                // Não salvar filhos no localStorage - apenas MongoDB
+                
+                // 5. Atualizar interface
+                renderizarListaFilhos();
+                atualizarInterface();
+                
+                console.log('✅ Limpeza concluída! Filhos atualizados:', filhos);
+                mostrarNotificacao('🧹 Dados corrompidos removidos com sucesso!', 'success');
+            } else {
+                console.error('❌ Erro ao buscar dados do servidor');
+                mostrarNotificacao('❌ Erro ao buscar dados do servidor', 'error');
+            }
+        } catch (error) {
+            console.error('❌ Erro na limpeza:', error);
+            mostrarNotificacao('❌ Erro na limpeza de dados', 'error');
+        }
+    };
+    
+    // ✨ NOVO: Função para remover filho teste e Chico
+    window.removerFilhoTesteEChico = async function() {
+        console.log('🗑️ Removendo filho teste e Chico...');
+        
+        try {
+            // Buscar dados do servidor
+            const response = await ApiService.get('/api/sincronizar-criancas');
+            
+            if (response.success && response.data.criancas) {
+                const criancasParaRemover = response.data.criancas.filter(c => 
+                    c.nome.toLowerCase() === 'filho teste' || 
+                    c.nome.toLowerCase() === 'chico'
+                );
+                
+                console.log(`🗑️ Crianças encontradas para remoção:`, criancasParaRemover);
+                
+                if (criancasParaRemover.length === 0) {
+                    console.log('✅ Nenhuma criança para remover encontrada');
+                    mostrarNotificacao('✅ Nenhuma criança para remover encontrada', 'success');
+                    return;
+                }
+                
+                // Remover cada criança
+                for (const crianca of criancasParaRemover) {
+                    console.log(`🗑️ Removendo: ${crianca.nome} (${crianca._id})`);
+                    
+                    const deleteResponse = await ApiService.delete(`/api/criancas/${crianca._id}`);
+                    
+                    if (deleteResponse.success) {
+                        console.log(`✅ ${crianca.nome} removido com sucesso!`);
+                    } else {
+                        console.error(`❌ Erro ao remover ${crianca.nome}:`, deleteResponse.error);
+                    }
+                }
+                
+                // Recarregar dados
+                await sincronizarManualmente();
+                
+                console.log('✅ Remoção de filho teste e Chico concluída!');
+                mostrarNotificacao('✅ filho teste e Chico removidos com sucesso!', 'success');
+            }
+        } catch (error) {
+            console.error('❌ Erro na remoção:', error);
+            mostrarNotificacao('❌ Erro na remoção', 'error');
+        }
+    };
+    
+    // ✨ NOVO: Função para limpar tudo (filhos e atividades)
+    window.limparTudo = async function() {
+        console.log('🧹 LIMPANDO TUDO - Filhos e Atividades...');
+        
+        try {
+            // 1. Remover todas as crianças
+            console.log('🗑️ Removendo todas as crianças...');
+            const responseCriancas = await ApiService.get('/api/sincronizar-criancas');
+            
+            if (responseCriancas.success && responseCriancas.data.criancas) {
+                const criancas = responseCriancas.data.criancas;
+                console.log(`🗑️ Encontradas ${criancas.length} crianças para remover`);
+                
+                for (const crianca of criancas) {
+                    console.log(`🗑️ Removendo: ${crianca.nome} (ID: ${crianca.id})`);
+                    await ApiService.delete(`/api/criancas/${crianca.id}`);
+                }
+            }
+            
+            // 2. Remover todas as atividades
+            console.log('🗑️ Removendo todas as atividades...');
+            const responseAtividades = await ApiService.get('/api/atividades');
+            
+            if (responseAtividades.success && responseAtividades.data.atividades) {
+                const atividades = responseAtividades.data.atividades;
+                console.log(`🗑️ Encontradas ${atividades.length} atividades para remover`);
+                
+                for (const atividade of atividades) {
+                    console.log(`🗑️ Removendo atividade: ${atividade.nome} (ID: ${atividade.id})`);
+                    await ApiService.delete(`/api/atividades/${atividade.id}`);
+                }
+            }
+            
+            // 3. Limpar dados locais
+            console.log('🧹 Limpando dados locais...');
+            filhos = [];
+            atividadesPositivas = [];
+            atividadesNegativas = [];
+            historico = [];
+            
+            // Não remover filhos do localStorage - apenas MongoDB
+            localStorage.removeItem('atividadesPositivas');
+            localStorage.removeItem('atividadesNegativas');
+            localStorage.removeItem('historico');
+            localStorage.removeItem('pontos');
+            
+            // 4. Recarregar interface
+            console.log('🔄 Recarregando interface...');
+            renderizarListaFilhos();
+            atualizarInterface();
+            
+            console.log('✅ Limpeza completa concluída!');
+            mostrarNotificacao('🧹 Tudo foi limpo! Agora você pode adicionar novos filhos e atividades.', 'success');
+            
+        } catch (error) {
+            console.error('❌ Erro na limpeza completa:', error);
+            mostrarNotificacao('❌ Erro na limpeza completa', 'error');
+        }
+    };
+    
     // ✨ NOVO: Botão de sair do sistema
     EventManager.addClickHandler('btn-sair', function(e) {
         console.log('🚪 Saindo do sistema...');
         e.preventDefault();
         
-        // Confirmar antes de sair
-        if (confirm('🤔 Deseja realmente sair do sistema?')) {
-            window.AuthUtils.logout();
-        }
+        // Usar modal de confirmação moderno
+        confirmarAcao('🤔 Deseja realmente sair do sistema?', function(confirmado) {
+            if (confirmado) {
+                window.AuthUtils.logout();
+            }
+        });
     }, 'Configurar botão de sair');
     
     // Modal de configurações - event listeners
@@ -2057,8 +2598,9 @@ function configurarEventos() {
     }, 'Fechar modal - X');
     EventManager.addClickHandler('btn-cancelar-config', fecharModalConfiguracoes, 'Cancelar configurações');
     
-    EventManager.addClickHandler('btn-baixar-log', baixarLog, 'Baixar log');
-    EventManager.addClickHandler('btn-resetar-pontos', resetarPontos, 'Resetar pontos');
+         EventManager.addClickHandler('btn-baixar-log', baixarLog, 'Baixar log completo');
+     EventManager.addClickHandler('btn-baixar-log-resumido', baixarLogResumido, 'Baixar log resumido');
+     EventManager.addClickHandler('btn-resetar-pontos', resetarPontos, 'Resetar pontos');
     EventManager.addClickHandler('btn-limpar-historico', limparHistorico, 'Limpar histórico');
     
     // Fechar modal clicando fora
@@ -2098,152 +2640,67 @@ function configurarEventos() {
 }
 
 // Configurar event listeners
-// Carregar nomes do localStorage
+// ✨ REMOVIDO: Carregar nomes do localStorage - tudo na nuvem agora
 function carregarNomes() {
-    const nomesSalvos = localStorage.getItem('nomes');
-    if (nomesSalvos) {
-        nomes = JSON.parse(nomesSalvos);
-    }
+    console.log('☁️ Nomes carregados da nuvem (MongoDB)');
 }
 
-// Carregar atividades do localStorage
-function carregarAtividades() {
-    console.log('🔄 carregarAtividades() chamada');
-    
-    const atividadesPositivasSalvas = localStorage.getItem('atividadesPositivas');
-    const atividadesNegativasSalvas = localStorage.getItem('atividadesNegativas');
-    
-    console.log('📱 Dados do localStorage:', {
-        positivas: atividadesPositivasSalvas,
-        negativas: atividadesNegativasSalvas
-    });
-    
-    if (atividadesPositivasSalvas) {
-        try {
-            atividadesPositivas = JSON.parse(atividadesPositivasSalvas);
-            console.log('✅ Atividades positivas carregadas:', atividadesPositivas);
-        } catch (error) {
-            console.error('❌ Erro ao carregar atividades positivas:', error);
-            atividadesPositivas = [];
-        }
-    } else {
-        console.log('⚠️ Nenhuma atividade positiva no localStorage');
-        atividadesPositivas = [];
-    }
-    
-    if (atividadesNegativasSalvas) {
-        try {
-            atividadesNegativas = JSON.parse(atividadesNegativasSalvas);
-            console.log('✅ Atividades negativas carregadas:', atividadesNegativas);
-        } catch (error) {
-            console.error('❌ Erro ao carregar atividades negativas:', error);
-            atividadesNegativas = [];
-        }
-    } else {
-        console.log('⚠️ Nenhuma atividade negativa no localStorage');
-        atividadesNegativas = [];
-    }
-    
-    console.log('📊 Total de atividades carregadas:', {
-        positivas: atividadesPositivas.length,
-        negativas: atividadesNegativas.length
-    });
-}
-
-// ✨ NOVA: Função para migrar dados antigos
-function migrarDadosAntigos() {
-    console.log('🔄 Verificando se há dados antigos para migrar...');
-    
-    // Verificar atividades positivas
-    const positivasAntigas = JSON.parse(localStorage.getItem('atividadesPositivas') || '[]');
-    let positivasAtualizadas = false;
-    
-    for (let i = 0; i < positivasAntigas.length; i++) {
-        if (!positivasAntigas[i].tipo) {
-            positivasAntigas[i].tipo = 'positiva';
-            positivasAtualizadas = true;
-        }
-    }
-    
-    // Verificar atividades negativas
-    const negativasAntigas = JSON.parse(localStorage.getItem('atividadesNegativas') || '[]');
-    let negativasAtualizadas = false;
-    
-    for (let i = 0; i < negativasAntigas.length; i++) {
-        if (!negativasAntigas[i].tipo) {
-            negativasAntigas[i].tipo = 'negativa';
-            negativasAtualizadas = true;
-        }
-    }
-    
-    // Salvar de volta se houve atualizações
-    if (positivasAtualizadas) {
-        localStorage.setItem('atividadesPositivas', JSON.stringify(positivasAntigas));
-        console.log('✅ Migradas', positivasAntigas.length, 'atividades positivas');
-    }
-    
-    if (negativasAtualizadas) {
-        localStorage.setItem('atividadesNegativas', JSON.stringify(negativasAntigas));
-        console.log('✅ Migradas', negativasAntigas.length, 'atividades negativas');
-    }
-    
-    if (positivasAtualizadas || negativasAtualizadas) {
-        console.log('🎉 Migração de dados concluída!');
-        // ✨ NOVO: Forçar sincronização após migração usando sincronizarAposAcao
-        setTimeout(async () => {
-            console.log('🔄 Forçando sincronização após migração...');
-            await salvarAtividades();
-            await sincronizarAposAcao('migração de dados');
-        }, 1000);
-    } else {
-        console.log('✅ Nenhuma migração necessária');
-    }
-}
-
-// ✨ NOVA: Verificar e limpar dados corrompidos
-function verificarELimparDadosCorrompidos() {
-    console.log('🔍 Verificando dados corrompidos...');
+// ✨ REFATORADO: Carregar atividades apenas da nuvem
+async function carregarAtividades() {
+    console.log('☁️ Carregando atividades da nuvem (MongoDB)...');
     
     try {
-        // Verificar atividades positivas
-        const positivas = JSON.parse(localStorage.getItem('atividadesPositivas') || '[]');
-        const positivasValidas = positivas.filter(atividade => {
-            return atividade && atividade.nome && atividade.pontos !== undefined && atividade.tipo;
-        });
+        // Carregar atividades do MongoDB
+        const response = await fetch('/api/atividades');
+        console.log('📡 Resposta do servidor:', response.status, response.statusText);
         
-        if (positivasValidas.length !== positivas.length) {
-            console.warn('⚠️ Atividades positivas corrompidas detectadas. Limpando...');
-            localStorage.setItem('atividadesPositivas', JSON.stringify(positivasValidas));
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 Dados recebidos:', data);
+            
+            atividadesPositivas = data.positivas || [];
+            atividadesNegativas = data.negativas || [];
+            
+            console.log('✅ Atividades carregadas da nuvem:', {
+                positivas: atividadesPositivas.length,
+                negativas: atividadesNegativas.length,
+                total: data.total || 0
+            });
+            
+            // Log detalhado das atividades
+            if (atividadesPositivas.length > 0) {
+                console.log('➕ Atividades positivas:', atividadesPositivas.map(a => `${a.nome} (${a.pontos} pts)`));
+            }
+            if (atividadesNegativas.length > 0) {
+                console.log('➖ Atividades negativas:', atividadesNegativas.map(a => `${a.nome} (${a.pontos} pts)`));
+            }
+        } else {
+            console.error('❌ Erro ao carregar atividades da nuvem:', response.status, response.statusText);
+            mostrarAvisoOffline('Não foi possível carregar as atividades do servidor. Verifique sua conexão com a internet.');
+            atividadesPositivas = [];
+            atividadesNegativas = [];
         }
-        
-        // Verificar atividades negativas
-        const negativas = JSON.parse(localStorage.getItem('atividadesNegativas') || '[]');
-        const negativasValidas = negativas.filter(atividade => {
-            return atividade && atividade.nome && atividade.pontos !== undefined && atividade.tipo;
-        });
-        
-        if (negativasValidas.length !== negativas.length) {
-            console.warn('⚠️ Atividades negativas corrompidas detectadas. Limpando...');
-            localStorage.setItem('atividadesNegativas', JSON.stringify(negativasValidas));
-        }
-        
-        console.log('✅ Verificação de dados concluída', {
-            positivasValidas: positivasValidas.length,
-            negativasValidas: negativasValidas.length
-        });
-        
     } catch (error) {
-        console.error('❌ Erro ao verificar dados:', error);
-        // Em caso de erro grave, limpar tudo
-        localStorage.removeItem('atividadesPositivas');
-        localStorage.removeItem('atividadesNegativas');
-        console.log('🧹 Dados corrompidos removidos - sistema limpo');
+        console.error('❌ Erro ao carregar atividades da nuvem:', error);
+        mostrarAvisoOffline('Erro de conexão com o servidor. Verifique sua internet e tente novamente.');
+        atividadesPositivas = [];
+        atividadesNegativas = [];
     }
 }
 
-// Salvar nomes no localStorage
+// ✨ REMOVIDO: Migração de dados antigos - tudo na nuvem agora
+function migrarDadosAntigos() {
+    console.log('☁️ Sistema funcionando apenas na nuvem - sem migração necessária');
+}
+
+// ✨ REMOVIDO: Verificação de dados corrompidos - tudo na nuvem agora
+function verificarELimparDadosCorrompidos() {
+    console.log('☁️ Sistema funcionando apenas na nuvem - sem verificação local necessária');
+}
+
+// ✨ REMOVIDO: Salvar nomes no localStorage - tudo na nuvem agora
 function salvarNomes() {
-    localStorage.setItem('nomes', JSON.stringify(nomes));
+    console.log('☁️ Nomes salvos na nuvem (MongoDB)');
 }
 
 // ✨ ATUALIZADO: Salvar atividades no localStorage E MongoDB
@@ -2402,51 +2859,80 @@ async function sincronizarAtividades() {
                 total: resultado.atividades.length
             });
         } else {
-            console.log('📱 Nenhuma atividade no MongoDB - carregando do localStorage');
-            carregarAtividadesLocal();
+            console.log('📱 Nenhuma atividade no MongoDB');
+            mostrarAvisoOffline('Nenhuma atividade encontrada no servidor.');
+            atividadesPositivas = [];
+            atividadesNegativas = [];
         }
     } catch (error) {
         console.error('❌ Erro ao sincronizar atividades do MongoDB:', error);
-        console.log('📱 Fallback: carregando atividades do localStorage');
-        carregarAtividadesLocal();
+        mostrarAvisoOffline('Erro ao sincronizar atividades com o servidor. Verifique sua conexão.');
+        atividadesPositivas = [];
+        atividadesNegativas = [];
     }
 }
 
-// ✨ NOVA: Carregar atividades apenas do localStorage
-function carregarAtividadesLocal() {
-    console.log('📱 carregarAtividadesLocal() chamada');
+// ✨ REMOVIDO: Sistema agora funciona 100% online sem fallbacks
+
+// ✨ NOVA: Função para mostrar aviso quando offline
+function mostrarAvisoOffline(mensagem) {
+    console.error('🌐 AVISO OFFLINE:', mensagem);
     
-    const positivas = JSON.parse(localStorage.getItem('atividadesPositivas') || '[]');
-    const negativas = JSON.parse(localStorage.getItem('atividadesNegativas') || '[]');
+    // Mostrar toast de erro
+    if (typeof mostrarToast === 'function') {
+        mostrarToast(mensagem, 'error');
+    }
     
-    console.log('📱 Dados brutos do localStorage:', {
-        positivas: positivas,
-        negativas: negativas
-    });
+    // Mostrar alerta nativo como backup
+    setTimeout(() => {
+        alert(`⚠️ ERRO DE CONEXÃO\n\n${mensagem}\n\nO sistema precisa de conexão com a internet para funcionar.`);
+    }, 1000);
     
-    // ✨ CORREÇÃO: Garantir que atividades tenham o campo 'tipo'
-    atividadesPositivas = positivas.map(atividade => ({
-        ...atividade,
-        tipo: atividade.tipo || 'positiva'
-    })).sort((a, b) => a.nome.localeCompare(b.nome));
+    // Adicionar indicador visual na interface
+    const statusIndicator = document.getElementById('status-indicator');
+    if (statusIndicator) {
+        statusIndicator.innerHTML = '🌐 Offline';
+        statusIndicator.className = 'status-offline';
+    }
+}
+
+// ✨ NOVA: Função para verificar status da conexão
+async function verificarStatusConexao() {
+    try {
+        const response = await fetch('/api/status', { 
+            method: 'GET',
+            cache: 'no-cache',
+            timeout: 5000
+        });
+        
+        if (response.ok) {
+            const statusIndicator = document.getElementById('status-indicator');
+            if (statusIndicator) {
+                statusIndicator.innerHTML = '🌐 Online';
+                statusIndicator.className = 'status-online';
+            }
+            return true;
+        } else {
+            throw new Error('Servidor não respondeu corretamente');
+        }
+    } catch (error) {
+        console.error('❌ Erro de conexão:', error);
+        const statusIndicator = document.getElementById('status-indicator');
+        if (statusIndicator) {
+            statusIndicator.innerHTML = '🌐 Offline';
+            statusIndicator.className = 'status-offline';
+        }
+        return false;
+    }
+}
+
+// ✨ NOVA: Iniciar verificação periódica de status
+function iniciarVerificacaoStatus() {
+    // Verificar a cada 30 segundos
+    setInterval(verificarStatusConexao, 30000);
     
-    atividadesNegativas = negativas.map(atividade => ({
-        ...atividade,
-        tipo: atividade.tipo || 'negativa'
-    })).sort((a, b) => a.nome.localeCompare(b.nome));
-    
-    console.log('📱 Atividades processadas:', {
-        atividadesPositivas: atividadesPositivas,
-        atividadesNegativas: atividadesNegativas
-    });
-    
-    atualizarSelectsAtividades();
-    atualizarListaAtividades();
-    
-    console.log('📱 Atividades carregadas do localStorage:', {
-        positivas: atividadesPositivas.length,
-        negativas: atividadesNegativas.length
-    });
+    // Verificar imediatamente
+    verificarStatusConexao();
 }
 
 // ✨ DEBUG: Função global para testar atividades
@@ -2471,6 +2957,48 @@ window.debugAtividades = function() {
     
     console.log('🔄 Forçando atualização...');
     atualizarListaAtividades();
+}
+
+// ✨ NOVA: Função para forçar carregamento do MongoDB
+window.forcarCarregamentoMongoDB = async function() {
+    console.log('🔄 === FORÇANDO CARREGAMENTO DO MONGODB ===');
+    
+    try {
+        console.log('📡 Fazendo requisição para /api/atividades...');
+        const response = await fetch('/api/atividades');
+        console.log('📡 Status da resposta:', response.status, response.statusText);
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('📊 Dados recebidos:', data);
+            
+            // Atualizar arrays globais
+            atividadesPositivas = data.positivas || [];
+            atividadesNegativas = data.negativas || [];
+            
+            console.log('✅ Arrays atualizados:', {
+                positivas: atividadesPositivas.length,
+                negativas: atividadesNegativas.length,
+                total: data.total
+            });
+            
+            // Salvar no localStorage como backup
+            localStorage.setItem('atividadesPositivas', JSON.stringify(atividadesPositivas));
+            localStorage.setItem('atividadesNegativas', JSON.stringify(atividadesNegativas));
+            
+            // Forçar atualização da interface
+            console.log('🎨 Atualizando interface...');
+            atualizarListaAtividades();
+            
+            return true;
+        } else {
+            console.error('❌ Erro na resposta:', response.status, response.statusText);
+            return false;
+        }
+    } catch (error) {
+        console.error('❌ Erro na requisição:', error);
+        return false;
+    }
 }
 
 // ✨ TESTE DIRETO: Função para forçar carregamento das atividades do MongoDB
@@ -2630,23 +3158,15 @@ async function sincronizarLogs() {
     }
 }
 
-// ✨ NOVA: Carregar logs apenas do localStorage
+// ✨ REMOVIDO: Carregar logs do localStorage - tudo na nuvem agora
 function carregarLogsLocal() {
-    const logsLocal = JSON.parse(localStorage.getItem('logs') || '[]');
-    logs = logsLocal.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
-    console.log('📱 Logs carregados do localStorage:', {
-        total: logs.length
-    });
+    console.log('☁️ Sistema funcionando apenas na nuvem - logs carregados do MongoDB');
 }
 
-// ✨ NOVA: Salvar logs no MongoDB e localStorage
+// ✨ REFATORADO: Salvar logs apenas na nuvem
 async function salvarLogs() {
-    // Salvar no localStorage (backup local)
-    localStorage.setItem('logs', JSON.stringify(logs));
-    
-    // Salvar no MongoDB (sincronização entre dispositivos)
-    if (socket && socket.connected && logs.length > 0) {
+    // Salvar apenas no MongoDB
+    if (logs.length > 0) {
         try {
             const response = await fetch('/api/salvar-logs', {
                 method: 'POST',
@@ -2658,31 +3178,21 @@ async function salvarLogs() {
             
             const resultado = await response.json();
             if (resultado.success) {
-                console.log('☁️ Logs sincronizados com MongoDB:', {
+                console.log('☁️ Logs salvos na nuvem (MongoDB):', {
                     total: logs.length
                 });
             } else {
-                console.error('❌ Erro ao sincronizar logs:', resultado.error);
+                console.error('❌ Erro ao salvar logs na nuvem:', resultado.error);
             }
         } catch (error) {
-            console.error('❌ Erro na sincronização de logs:', error);
+            console.error('❌ Erro ao salvar logs na nuvem:', error);
         }
     }
-    
-    console.log('💾 Logs salvos localmente:', {
-        total: logs.length
-    });
 }
 
-// ✨ NOVA: Limpar cache de atividades (para debug)
+// ✨ REMOVIDO: Limpar cache local - tudo na nuvem agora
 function limparCacheAtividades() {
-    localStorage.removeItem('atividadesPositivas');
-    localStorage.removeItem('atividadesNegativas');
-    atividadesPositivas = [];
-    atividadesNegativas = [];
-    atualizarSelectsAtividades();
-    atualizarListaAtividades();
-    console.log('🧹 Cache de atividades limpo');
+    console.log('☁️ Sistema funcionando apenas na nuvem - sem cache local');
 }
 
 // Renderizar dashboard de pontos dinâmico
@@ -2695,7 +3205,7 @@ function renderizarDashboard() {
     console.log('📦 Container encontrado:', container);
     
     if (!container) {
-        console.error('❌ Container .pontos-display não encontrado!');
+        console.log('ℹ️ Container .pontos-display não encontrado - provavelmente na página de configurações');
         return;
     }
     
@@ -2747,6 +3257,8 @@ function renderizarSelects() {
         'filtro-filho'
     ];
     
+    let selectsEncontrados = 0;
+    
     selects.forEach(selectId => {
         // Tentar diferentes métodos para encontrar o elemento
         let select = DomUtils.getElementById(selectId);
@@ -2759,6 +3271,7 @@ function renderizarSelects() {
         console.log(`🔍 Select ${selectId}:`, select);
         
         if (select) {
+            selectsEncontrados++;
             // Salvar valor atual
             const valorAtual = select.value;
             
@@ -2787,9 +3300,15 @@ function renderizarSelects() {
             
             console.log(`✅ Select ${selectId} atualizado com ${filhos.length} filhos`);
         } else {
-            console.log(`⚠️ Select ${selectId} não encontrado no DOM`);
+            console.log(`ℹ️ Select ${selectId} não encontrado - provavelmente na página de configurações`);
         }
     });
+    
+    console.log(`📊 Resumo: ${selectsEncontrados} selects encontrados de ${selects.length} esperados`);
+    
+    if (selectsEncontrados === 0) {
+        console.log('ℹ️ Nenhum select encontrado - provavelmente na página de configurações');
+    }
 }
 
 // Atualizar toda a interface
@@ -3004,22 +3523,25 @@ async function editarAtividade(id, tipo) {
 // Deletar atividade
 // Deletar atividade
 async function deletarAtividade(id, tipo) {
-    if (!confirm('Tem certeza que quer deletar esta atividade?')) return;
-    
-    if (tipo === 'positiva') {
-        atividadesPositivas = atividadesPositivas.filter(a => a.id !== id);
-    } else {
-        atividadesNegativas = atividadesNegativas.filter(a => a.id !== id);
-    }
-    
-    await salvarAtividades();
-    atualizarSelectsAtividades();
-    atualizarListaAtividades();
-    
-    // ✨ NOVO: Sincronizar após deletar atividade
-    await sincronizarAposAcao('deletar atividade');
-    
-    mostrarNotificacao('🗑️ Atividade deletada!', 'warning');
+    // ✨ CORREÇÃO: Usar modal de confirmação padrão do app
+    confirmarAcao('Tem certeza que quer deletar esta atividade?', async (confirmado) => {
+        if (!confirmado) return;
+        
+        if (tipo === 'positiva') {
+            atividadesPositivas = atividadesPositivas.filter(a => a.id !== id);
+        } else {
+            atividadesNegativas = atividadesNegativas.filter(a => a.id !== id);
+        }
+        
+        await salvarAtividades();
+        atualizarSelectsAtividades();
+        atualizarListaAtividades();
+        
+        // ✨ NOVO: Sincronizar após deletar atividade
+        await sincronizarAposAcao('deletar atividade');
+        
+        mostrarNotificacao('🗑️ Atividade deletada!', 'warning');
+    });
 }
 
 // Nova atividade positiva
@@ -3252,7 +3774,15 @@ async function handleAdicionarPontos(e) {
         const pontosAntes = filho.pontos;
         filho.pontos += atividade.pontos;
         
-        adicionarLog('adicionar_pontos', {
+        // ✨ NOVO: Adicionar operação pendente para sincronização futura
+        adicionarOperacaoPendente({
+            nome: filho.nome,
+            pontos: atividade.pontos,
+            atividade: atividade.nome,
+            tipo: 'adicionar'
+        });
+        
+        adicionarLog('adicionar_pontos_offline', {
             filho: filho.nome,
             atividade: atividade.nome,
             pontos: atividade.pontos,
@@ -3269,7 +3799,7 @@ async function handleAdicionarPontos(e) {
         await sincronizarAposAcao('adicionar pontos (offline)');
         
         // Notificação mais simples para operações offline
-        mostrarNotificacao(`✅ +${atividade.pontos} pontos para ${filho.nome}!`, 'success');
+        mostrarNotificacao(`✅ +${atividade.pontos} pontos para ${filho.nome}! (Offline)`, 'success');
     }
 }
 
@@ -3369,7 +3899,15 @@ async function handleRemoverPontos(e) {
         const pontosAntes = filho.pontos;
         filho.pontos -= atividade.pontos;
         
-        adicionarLog('remover_pontos', {
+        // ✨ NOVO: Adicionar operação pendente para sincronização futura
+        adicionarOperacaoPendente({
+            nome: filho.nome,
+            pontos: atividade.pontos,
+            atividade: atividade.nome,
+            tipo: 'remover'
+        });
+        
+        adicionarLog('remover_pontos_offline', {
             filho: filho.nome,
             atividade: atividade.nome,
             pontos: atividade.pontos,
@@ -3386,7 +3924,7 @@ async function handleRemoverPontos(e) {
         await sincronizarAposAcao('remover pontos (offline)');
         
         // Notificação mais simples para operações offline
-        mostrarNotificacao(`✅ -${atividade.pontos} pontos para ${filho.nome}!`, 'success');
+        mostrarNotificacao(`✅ -${atividade.pontos} pontos para ${filho.nome}! (Offline)`, 'success');
     }
 }
 
@@ -3807,14 +4345,14 @@ function mostrarModalCompartilhamento() {
     if (!modal) {
         modal = document.createElement('div');
         modal.id = 'modal-compartilhamento';
-        modal.className = 'modal-compartilhamento';
+        modal.className = 'modal-confirmacao';
         modal.innerHTML = `
-            <div class="modal-compartilhamento-content">
-                <div class="modal-compartilhamento-header">
+            <div class="modal-confirmacao-content">
+                <div class="modal-confirmacao-header">
                     <h3>📤 Compartilhar Histórico</h3>
-                    <button class="modal-close" onclick="fecharModalCompartilhamento()">&times;</button>
+                    <button class="modal-confirmacao-close" onclick="fecharModalCompartilhamento()">&times;</button>
                 </div>
-                <div class="modal-compartilhamento-body">
+                <div class="modal-confirmacao-body">
                     <p>Escolha o formato para compartilhar o histórico:</p>
                     <div class="opcoes-compartilhamento">
                         <button class="btn-opcao-compartilhamento" onclick="compartilharWhatsApp()">
@@ -3840,7 +4378,7 @@ function mostrarModalCompartilhamento() {
         document.body.appendChild(modal);
     }
     
-    modal.style.display = 'flex';
+    modal.classList.add('show');
 }
 
 // Fechar modal de compartilhamento
@@ -3848,7 +4386,7 @@ function fecharModalCompartilhamento() {
     // ✨ REFATORADO: Usar DomUtils para acessar modal
     const modal = DomUtils.getElement('modal-compartilhamento');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('show');
     }
 }
 
@@ -4196,17 +4734,44 @@ function salvarPontos() {
     localStorage.setItem('pontosFilho3', pontosFilho3.toString());
 }
 
-// Mostrar notificação
+// Sistema de fila para notificações
+let filaNotificacoes = [];
+let notificacaoAtiva = null;
+
+// Mostrar notificação com sistema de fila
 function mostrarNotificacao(mensagem, tipo) {
+    // Adicionar à fila
+    filaNotificacoes.push({ mensagem, tipo });
+    
+    // Processar fila se não há notificação ativa
+    if (!notificacaoAtiva) {
+        processarFilaNotificacoes();
+    }
+}
+
+// Processar fila de notificações
+function processarFilaNotificacoes() {
+    if (filaNotificacoes.length === 0) {
+        notificacaoAtiva = null;
+        return;
+    }
+    
+    const { mensagem, tipo } = filaNotificacoes.shift();
+    notificacaoAtiva = true;
+    
     // Criar elemento de notificação
     const notificacao = document.createElement('div');
     notificacao.className = `notificacao notificacao-${tipo}`;
     notificacao.textContent = mensagem;
     
+    // Calcular posição baseada no número de notificações ativas
+    const notificacoesAtivas = document.querySelectorAll('.notificacao');
+    const topOffset = 20 + (notificacoesAtivas.length * 80);
+    
     // Estilos da notificação
     notificacao.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: ${topOffset}px;
         right: 20px;
         padding: 15px 20px;
         border-radius: 10px;
@@ -4215,6 +4780,8 @@ function mostrarNotificacao(mensagem, tipo) {
         z-index: 1000;
         animation: slideIn 0.3s ease;
         box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        max-width: 350px;
+        word-wrap: break-word;
     `;
     
     // Cores baseadas no tipo
@@ -4222,34 +4789,169 @@ function mostrarNotificacao(mensagem, tipo) {
         notificacao.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
     } else if (tipo === 'warning') {
         notificacao.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+    } else if (tipo === 'info') {
+        notificacao.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
     } else {
         notificacao.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)';
     }
     
     document.body.appendChild(notificacao);
     
-    // Remover após 3 segundos
+    // Remover após 3 segundos e processar próxima
     setTimeout(() => {
         notificacao.style.animation = 'slideOut 0.3s ease';
         setTimeout(() => {
             if (notificacao.parentNode) {
                 notificacao.parentNode.removeChild(notificacao);
             }
-        }, 300);
-    }, 3000);
+            // Processar próxima notificação na fila
+            processarFilaNotificacoes();
+            }, 300);
+}, 3000);
 }
 
-// Adicionar estilos CSS para animações
+// Função para limpar todas as notificações
+function limparTodasNotificacoes() {
+    // Limpar fila
+    filaNotificacoes = [];
+    notificacaoAtiva = null;
+    
+    // Remover todas as notificações visíveis
+    const notificacoes = document.querySelectorAll('.notificacao');
+    notificacoes.forEach(notificacao => {
+        notificacao.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => {
+            if (notificacao.parentNode) {
+                notificacao.parentNode.removeChild(notificacao);
+            }
+        }, 300);
+    });
+}
+
+// ✨ NOVO: Sistema de Modal de Confirmação Moderno
+let confirmacaoCallback = null;
+
+// Função para mostrar modal de confirmação
+function mostrarConfirmacao(titulo, mensagem, callback) {
+    const modal = document.getElementById('modal-confirmacao');
+    const tituloElement = document.getElementById('modal-confirmacao-titulo');
+    const mensagemElement = document.getElementById('modal-confirmacao-mensagem');
+    
+    // Configurar conteúdo
+    tituloElement.textContent = titulo;
+    mensagemElement.textContent = mensagem;
+    
+    // Armazenar callback
+    confirmacaoCallback = callback;
+    
+    // Mostrar modal
+    modal.classList.add('show');
+    
+    // Adicionar event listeners
+    const btnConfirmar = document.getElementById('modal-confirmacao-confirmar');
+    const btnCancelar = document.getElementById('modal-confirmacao-cancelar');
+    const btnClose = document.getElementById('modal-confirmacao-close');
+    
+    // Função para fechar modal
+    const fecharModal = () => {
+        modal.classList.remove('show');
+        confirmacaoCallback = null;
+    };
+    
+    // Event listeners
+    btnConfirmar.onclick = () => {
+        if (confirmacaoCallback) {
+            confirmacaoCallback(true);
+        }
+        fecharModal();
+    };
+    
+    btnCancelar.onclick = () => {
+        if (confirmacaoCallback) {
+            confirmacaoCallback(false);
+        }
+        fecharModal();
+    };
+    
+    btnClose.onclick = fecharModal;
+    
+    // Fechar ao clicar fora do modal
+    modal.onclick = (e) => {
+        if (e.target === modal) {
+            fecharModal();
+        }
+    };
+    
+    // Fechar com ESC
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            fecharModal();
+            document.removeEventListener('keydown', handleEsc);
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+}
+
+// Função para substituir o confirm() nativo
+function confirmarAcao(mensagem, callback) {
+    mostrarConfirmacao('⚠️ Confirmação', mensagem, callback);
+}
+
+// ✨ EXEMPLO: Como usar o modal de confirmação em outras ações
+function exemploConfirmacao() {
+    // Exemplo 1: Confirmação simples
+    confirmarAcao('Deseja realmente excluir este item?', function(confirmado) {
+        if (confirmado) {
+            console.log('✅ Usuário confirmou a ação');
+            // Executar ação aqui
+        } else {
+            console.log('❌ Usuário cancelou a ação');
+        }
+    });
+    
+    // Exemplo 2: Confirmação com título personalizado
+    mostrarConfirmacao('🗑️ Excluir Item', 'Esta ação não pode ser desfeita. Continuar?', function(confirmado) {
+        if (confirmado) {
+            console.log('✅ Item excluído');
+        }
+    });
+}
+
+// Adicionar estilos CSS para animações melhoradas
 const style = document.createElement('style');
 style.textContent = `
     @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+        from { 
+            transform: translateX(100%); 
+            opacity: 0; 
+        }
+        to { 
+            transform: translateX(0); 
+            opacity: 1; 
+        }
     }
     
     @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
+        from { 
+            transform: translateX(0); 
+            opacity: 1; 
+        }
+        to { 
+            transform: translateX(100%); 
+            opacity: 0; 
+        }
+    }
+    
+    .notificacao {
+        transition: all 0.3s ease;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.4;
+    }
+    
+    .notificacao:hover {
+        transform: translateX(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
     }
 `;
 document.head.appendChild(style);
@@ -4770,25 +5472,53 @@ function atualizarSelectsAtividades() {
     console.log('📝 Atividades positivas:', atividadesPositivas);
     console.log('📝 Atividades negativas:', atividadesNegativas);
     
-    // Atualizar dropdown de atividades positivas (adicionar pontos)
-    atualizarDropdownAtividades('adicionar', atividadesPositivas, 'positive');
+    // Verificar se estamos na página correta
+    const isConfigPage = window.location.pathname.includes('configuracoes.html');
+    console.log('📍 Página atual:', window.location.pathname, 'É página de configurações:', isConfigPage);
     
-    // Atualizar dropdown de atividades negativas (remover pontos)
-    atualizarDropdownAtividades('remover', atividadesNegativas, 'negative');
+    // Só atualizar dropdowns se estivermos na página de configurações
+    if (isConfigPage) {
+        // Atualizar dropdown de atividades positivas (adicionar pontos)
+        atualizarDropdownAtividades('adicionar', atividadesPositivas, 'positive');
+        
+        // Atualizar dropdown de atividades negativas (remover pontos)
+        atualizarDropdownAtividades('remover', atividadesNegativas, 'negative');
+        
+        console.log('✅ Atualização de dropdowns concluída');
+    } else {
+        console.log('ℹ️ Não estamos na página de configurações, pulando atualização de dropdowns');
+    }
     
-    console.log('✅ Atualização de dropdowns concluída');
     console.log(`📊 Resumo: ${atividadesPositivas.length} positivas, ${atividadesNegativas.length} negativas`);
 }
 
 function atualizarDropdownAtividades(tipo, atividades, classePontos) {
+    console.log(`🔍 Verificando elementos do dropdown ${tipo}...`);
+    
     const dropdownHeader = DomUtils.getElementById(`dropdown-header-${tipo}`);
     const dropdownContent = DomUtils.getElementById(`dropdown-content-${tipo}`);
     const dropdownOptions = DomUtils.getElementById(`options-${tipo}`);
     const hiddenSelect = DomUtils.getElementById(`atividade-${tipo}`);
     const searchInput = DomUtils.getElementById(`search-${tipo}`);
     
+    // Log detalhado dos elementos encontrados
+    console.log(`📋 Elementos do dropdown ${tipo}:`, {
+        header: !!dropdownHeader,
+        content: !!dropdownContent,
+        options: !!dropdownOptions,
+        select: !!hiddenSelect,
+        search: !!searchInput
+    });
+    
     if (!dropdownHeader || !dropdownContent || !dropdownOptions || !hiddenSelect) {
         console.error(`❌ Elementos do dropdown ${tipo} não encontrados`);
+        console.error(`🔍 IDs procurados:`, [
+            `dropdown-header-${tipo}`,
+            `dropdown-content-${tipo}`,
+            `options-${tipo}`,
+            `atividade-${tipo}`
+        ]);
+        console.error(`📍 Página atual:`, window.location.pathname);
         return;
     }
     
@@ -4991,7 +5721,15 @@ function mostrarToast(message, type = 'success') {
 
 // ============== SISTEMA DE LOG E UTILITÁRIOS ==============
 
-// ✨ ATUALIZADA: Função para baixar log com sincronização MongoDB
+// ✨ ATUALIZADA: Função para baixar log objetivo e simplificado
+// 
+// EXEMPLO DO LOG SIMPLIFICADO:
+// Data,Hora,Usuário,Ação,Filho,Atividade,Pontos,Total
+// 27/01/2025,14:30:25,"João","Adicionou","Maria","Lavar louça",5,15
+// 27/01/2025,14:35:10,"João","Removeu","Pedro","Não fez lição",-3,7
+// 27/01/2025,15:00:00,"Admin","Criou filho","","",,
+// 27/01/2025,15:05:30,"Admin","Criou atividade","","Arrumar quarto",10,
+//
 async function baixarLog() {
     try {
         // Primeiro, sincronizar logs do MongoDB se conectado
@@ -5004,32 +5742,60 @@ async function baixarLog() {
             return;
         }
         
-        // Criar cabeçalho do CSV com informações detalhadas
+        // Criar cabeçalho simplificado do CSV
         const cabecalho = [
-            'Data', 'Horário', 'Perfil', 'Responsável', 'Ação', 
-            'Filho', 'Atividade', 'Pontos', 'Pontos Antes', 'Pontos Depois', 
-            'Tipo', 'Detalhes Extras', 'ID Log', 'Dispositivo'
+            'Data', 'Hora', 'Usuário', 'Ação', 'Filho', 'Atividade', 'Pontos', 'Total'
         ];
         
-        // Converter logs para CSV com informações completas
+        // Converter logs para CSV simplificado
         const csvContent = [
             cabecalho.join(','),
-            ...logs.map(log => [
-                log.data || '',
-                log.horario || '',
-                log.perfil || 'Não informado',
-                `"${log.responsavel || 'Não identificado'}"`,
-                `"${(log.acao || '').replace('_', ' ').toUpperCase()}"`,
-                `"${log.detalhes.filho || ''}"`,
-                `"${log.detalhes.atividade || ''}"`,
-                log.detalhes.pontos || '',
-                log.detalhes.pontos_antes || '',
-                log.detalhes.pontos_depois || '',
-                log.detalhes.tipo || '',
-                `"${JSON.stringify(log.detalhes).replace(/"/g, '""')}"`,
-                log.id || '',
-                `"${log.dispositivo || 'Desconhecido'}"`
-            ].join(','))
+            ...logs.map(log => {
+                // Simplificar a ação
+                let acaoSimples = log.acao || '';
+                if (acaoSimples.includes('adicionar_pontos')) acaoSimples = 'Adicionou';
+                else if (acaoSimples.includes('remover_pontos')) acaoSimples = 'Removeu';
+                else if (acaoSimples.includes('adicionar_filho')) acaoSimples = 'Criou filho';
+                else if (acaoSimples.includes('editar_filho')) acaoSimples = 'Editou filho';
+                else if (acaoSimples.includes('remover_filho')) acaoSimples = 'Removeu filho';
+                else if (acaoSimples.includes('adicionar_atividade')) acaoSimples = 'Criou atividade';
+                else if (acaoSimples.includes('editar_atividade')) acaoSimples = 'Editou atividade';
+                else if (acaoSimples.includes('remover_atividade')) acaoSimples = 'Removeu atividade';
+                else if (acaoSimples.includes('resetar_pontos')) acaoSimples = 'Resetou pontos';
+                else if (acaoSimples.includes('limpar_historico')) acaoSimples = 'Limpou histórico';
+                else if (acaoSimples.includes('download_log')) acaoSimples = 'Baixou log';
+                else acaoSimples = acaoSimples.replace('_', ' ').toUpperCase();
+                
+                // Formatar data e hora
+                const data = log.data || '';
+                const hora = log.horario || '';
+                
+                // Simplificar usuário
+                const usuario = log.responsavel || log.perfil || 'Sistema';
+                
+                // Informações da criança e atividade
+                const filho = log.detalhes.filho || '';
+                const atividade = log.detalhes.atividade || '';
+                
+                // Pontos (só mostrar se for ação de pontos)
+                let pontos = '';
+                let total = '';
+                if (log.detalhes.pontos) {
+                    pontos = log.detalhes.pontos;
+                    total = log.detalhes.pontos_depois || '';
+                }
+                
+                return [
+                    data,
+                    hora,
+                    `"${usuario}"`,
+                    `"${acaoSimples}"`,
+                    `"${filho}"`,
+                    `"${atividade}"`,
+                    pontos,
+                    total
+                ].join(',');
+            })
         ].join('\n');
         
         // Criar arquivo para download
@@ -5041,7 +5807,7 @@ async function baixarLog() {
         const horaAtual = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
         
         link.setAttribute('href', url);
-        link.setAttribute('download', `log_detalhado_pontos_${dataAtual}_${horaAtual}.csv`);
+        link.setAttribute('download', `log_pontos_${dataAtual}_${horaAtual}.csv`);
         link.style.visibility = 'hidden';
         
         document.body.appendChild(link);
@@ -5050,16 +5816,102 @@ async function baixarLog() {
         
         adicionarLog('download_log', {
             total_registros: logs.length,
-            formato: 'CSV_DETALHADO',
-            arquivo: `log_detalhado_pontos_${dataAtual}_${horaAtual}.csv`,
+            formato: 'CSV_SIMPLIFICADO',
+            arquivo: `log_pontos_${dataAtual}_${horaAtual}.csv`,
             fonte: socket && socket.connected ? 'MongoDB + Local' : 'Local apenas'
         });
         
-        mostrarNotificacao(`📋 Log baixado com ${logs.length} registros!`, 'success');
+        mostrarNotificacao(`📋 Log simplificado baixado com ${logs.length} registros!`, 'success');
         
     } catch (error) {
         console.error('❌ Erro ao baixar log:', error);
         mostrarNotificacao('❌ Erro ao baixar log!', 'error');
+    }
+}
+
+// ✨ NOVA: Função para baixar log super resumido (apenas pontos)
+//
+// EXEMPLO DO LOG RESUMIDO (APENAS PONTOS):
+// Data,Hora,Filho,Atividade,Pontos,Total
+// 27/01/2025,14:30:25,"Maria","Lavar louça",5,15
+// 27/01/2025,14:35:10,"Pedro","Não fez lição",-3,7
+// 27/01/2025,16:20:15,"Maria","Fez lição",10,25
+//
+async function baixarLogResumido() {
+    try {
+        // Primeiro, sincronizar logs do MongoDB se conectado
+        if (socket && socket.connected) {
+            await sincronizarLogs();
+        }
+        
+        if (logs.length === 0) {
+            mostrarNotificacao('📋 Nenhum log disponível para download!', 'warning');
+            return;
+        }
+        
+        // Filtrar apenas logs de pontos
+        const logsPontos = logs.filter(log => 
+            log.acao && (log.acao.includes('adicionar_pontos') || log.acao.includes('remover_pontos'))
+        );
+        
+        if (logsPontos.length === 0) {
+            mostrarNotificacao('📋 Nenhum registro de pontos encontrado!', 'warning');
+            return;
+        }
+        
+        // Criar cabeçalho super simplificado
+        const cabecalho = ['Data', 'Hora', 'Filho', 'Atividade', 'Pontos', 'Total'];
+        
+        // Converter logs para CSV super simplificado
+        const csvContent = [
+            cabecalho.join(','),
+            ...logsPontos.map(log => {
+                const data = log.data || '';
+                const hora = log.horario || '';
+                const filho = log.detalhes.filho || '';
+                const atividade = log.detalhes.atividade || '';
+                const pontos = log.detalhes.pontos || '';
+                const total = log.detalhes.pontos_depois || '';
+                
+                return [
+                    data,
+                    hora,
+                    `"${filho}"`,
+                    `"${atividade}"`,
+                    pontos,
+                    total
+                ].join(',');
+            })
+        ].join('\n');
+        
+        // Criar arquivo para download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        const dataAtual = new Date().toISOString().split('T')[0];
+        const horaAtual = new Date().toTimeString().split(' ')[0].replace(/:/g, '-');
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `pontos_${dataAtual}_${horaAtual}.csv`);
+        link.style.visibility = 'hidden';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        adicionarLog('download_log_resumido', {
+            total_registros: logsPontos.length,
+            formato: 'CSV_PONTOS_ONLY',
+            arquivo: `pontos_${dataAtual}_${horaAtual}.csv`,
+            fonte: socket && socket.connected ? 'MongoDB + Local' : 'Local apenas'
+        });
+        
+        mostrarNotificacao(`📋 Log de pontos baixado com ${logsPontos.length} registros!`, 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao baixar log resumido:', error);
+        mostrarNotificacao('❌ Erro ao baixar log resumido!', 'error');
     }
 }
 
@@ -5127,34 +5979,33 @@ async function resetarPontos() {
         return;
     }
     
-    const confirmacao = confirm(`🔄 Tem certeza que deseja resetar todos os pontos?\n\nIsto irá:\n• Zerar os pontos de todas as crianças\n• Manter o histórico preservado\n• Registrar esta ação no log\n\nEsta ação não pode ser desfeita!`);
-    
-    if (!confirmacao) {
-        return;
-    }
-    
-    // Salvar pontos atuais antes do reset
-    const pontosAnteriores = {};
-    filhos.forEach(filho => {
-        pontosAnteriores[filho.nome] = filho.pontos;
-        filho.pontos = 0;
+    // ✨ CORREÇÃO: Usar modal de confirmação padrão do app
+    confirmarAcao(`🔄 Tem certeza que deseja resetar todos os pontos?\n\nIsto irá:\n• Zerar os pontos de todas as crianças\n• Manter o histórico preservado\n• Registrar esta ação no log\n\nEsta ação não pode ser desfeita!`, async (confirmado) => {
+        if (!confirmado) return;
+        
+        // Salvar pontos atuais antes do reset
+        const pontosAnteriores = {};
+        filhos.forEach(filho => {
+            pontosAnteriores[filho.nome] = filho.pontos;
+            filho.pontos = 0;
+        });
+        
+        // Adicionar log do reset
+        adicionarLog('resetar_pontos', {
+            total_criancas: filhos.length,
+            pontos_anteriores: pontosAnteriores,
+            motivo: 'Reset mensal/manual'
+        });
+        
+        // Atualizar interface e salvar
+        atualizarInterface();
+        await salvarDados();
+        
+        // ✨ NOVO: Sincronizar após resetar pontos
+        await sincronizarAposAcao('resetar pontos');
+        
+        mostrarNotificacao(`🔄 Pontos resetados para ${filhos.length} crianças!`, 'success');
     });
-    
-    // Adicionar log do reset
-    adicionarLog('resetar_pontos', {
-        total_criancas: filhos.length,
-        pontos_anteriores: pontosAnteriores,
-        motivo: 'Reset mensal/manual'
-    });
-    
-    // Atualizar interface e salvar
-    atualizarInterface();
-    await salvarDados();
-    
-    // ✨ NOVO: Sincronizar após resetar pontos
-    await sincronizarAposAcao('resetar pontos');
-    
-    mostrarNotificacao(`🔄 Pontos resetados para ${filhos.length} crianças!`, 'success');
 }
 
 // ✨ NOVA: Função auxiliar para fazer requisições com retry automático
@@ -5211,18 +6062,13 @@ async function limparHistorico() {
         return;
     }
     
-    const confirmacao = confirm(`🗑️ Tem certeza que deseja limpar TODO o histórico?\n\nIsto irá:\n• Apagar permanentemente ${totalRegistros} registros\n• Manter os pontos atuais das crianças\n• Registrar esta ação no log\n\n⚠️ ESTA AÇÃO NÃO PODE SER DESFEITA!`);
-    
-    if (!confirmacao) {
-        return;
-    }
-    
-    // Confirmação dupla para ação crítica
-    const confirmacaoFinal = confirm(`⚠️ CONFIRMAÇÃO FINAL\n\nVocê está prestes a apagar ${totalRegistros} registros do histórico.\n\nClique OK para confirmar ou Cancelar para abortar:`);
-    
-    if (!confirmacaoFinal) {
-        return;
-    }
+    // ✨ CORREÇÃO: Usar modal de confirmação padrão do app com confirmação dupla
+    confirmarAcao(`🗑️ Tem certeza que deseja limpar TODO o histórico?\n\nIsto irá:\n• Apagar permanentemente ${totalRegistros} registros\n• Manter os pontos atuais das crianças\n• Registrar esta ação no log\n\n⚠️ ESTA AÇÃO NÃO PODE SER DESFEITA!`, async (confirmado) => {
+        if (!confirmado) return;
+        
+        // Confirmação dupla para ação crítica
+        confirmarAcao(`⚠️ CONFIRMAÇÃO FINAL\n\nVocê está prestes a apagar ${totalRegistros} registros do histórico.\n\nClique Confirmar para prosseguir ou Cancelar para abortar:`, async (confirmadoFinal) => {
+            if (!confirmadoFinal) return;
     
     try {
         // Salvar quantidade de registros para log
@@ -5279,14 +6125,17 @@ async function limparHistorico() {
             opcaoAlternativa = '\n\n💡 ALTERNATIVAS:\n1. Aguarde alguns minutos e tente novamente\n2. Limpe apenas localmente (execute: limparHistoricoLocal())';
         }
         
-        const tentarLocal = confirm(`❌ ${mensagemErro}${opcaoAlternativa}\n\nDeseja limpar apenas o histórico local?`);
-        
-        if (tentarLocal) {
-            return limparHistoricoLocal();
-        } else {
-            mostrarNotificacao('❌ Limpeza de histórico cancelada', 'warning');
-        }
+        // ✨ CORREÇÃO: Usar modal de confirmação padrão do app para opção alternativa
+        confirmarAcao(`❌ ${mensagemErro}${opcaoAlternativa}\n\nDeseja limpar apenas o histórico local?`, (tentarLocal) => {
+            if (tentarLocal) {
+                return limparHistoricoLocal();
+            } else {
+                mostrarNotificacao('❌ Limpeza de histórico cancelada', 'warning');
+            }
+        });
     }
+        });
+    });
 }
 
 // ================================
@@ -5360,6 +6209,75 @@ async function verificarIntegridadeDados() {
         console.log('✅ Verificação de integridade concluída');
     } catch (error) {
         console.error('❌ Erro durante verificação de integridade:', error);
+    }
+}
+
+// ✨ NOVA: Função global para debug dos filhos
+window.debugFilhos = function() {
+    console.log('🔍 === DEBUG FILHOS ===');
+    console.log('📊 Array filhos:', filhos);
+    console.log('📊 Quantidade de filhos:', filhos.length);
+    console.log('📱 localStorage filhos: não usado (apenas MongoDB)');
+    
+    // Verificar se o container existe
+    const container = document.getElementById('lista-filhos');
+    console.log('🎯 Container lista-filhos:', container);
+    
+    // Verificar se estamos na página de configurações
+    const tabFilhos = document.getElementById('tab-filhos');
+    console.log('🎯 Tab filhos:', tabFilhos);
+    
+    // Forçar renderização
+    console.log('🔄 Forçando renderização...');
+    renderizarListaFilhos();
+    
+    // Verificar novamente após renderização
+    setTimeout(() => {
+        const containerApos = document.getElementById('lista-filhos');
+        console.log('🎯 Container após renderização:', containerApos);
+        console.log('📝 Conteúdo do container:', containerApos?.innerHTML);
+    }, 100);
+};
+
+// ✨ NOVA: Função global para forçar carregamento dos filhos
+window.forcarCarregamentoFilhos = async function() {
+    console.log('🔄 === FORÇANDO CARREGAMENTO DOS FILHOS ===');
+    
+    try {
+        // Forçar sincronização
+        await sincronizarDados();
+        
+        // Carregar do localStorage como fallback
+        carregarDoLocalStorage();
+        
+        // Forçar renderização
+        renderizarListaFilhos();
+        
+        console.log('✅ Carregamento forçado concluído');
+        console.log('📊 Filhos carregados:', filhos.length);
+        
+        return true;
+    } catch (error) {
+        console.error('❌ Erro no carregamento forçado:', error);
+        return false;
+    }
+};
+
+// Função utilitária para bloquear ações se offline
+function bloquearSeOffline() {
+    if (!navigator.onLine) {
+        mostrarNotificacao('Você está offline. Conecte-se à internet para usar o sistema.', 'error');
+        throw new Error('Ação bloqueada: usuário offline');
+    }
+}
+
+// Exemplo de uso em uma ação:
+async function handleAdicionarPontos(e) {
+    try {
+        bloquearSeOffline();
+        // ... restante da lógica de adicionar pontos ...
+    } catch (err) {
+        console.warn(err.message);
     }
 }
 

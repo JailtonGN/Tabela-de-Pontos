@@ -10,6 +10,7 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+.env.example
 
 # Logs
 logs
@@ -68,3 +69,48 @@ build/
 # Temporary files
 tmp/
 temp/
+
+# Backup files
+__backup_lixo_seguro__/
+*.bak
+*.backup
+
+# Test files
+teste-*.html
+*.test.js
+*.spec.js
+
+# Data files (local development)
+data/*.json
+!data/criancas.json.example
+!data/pontos.json.example
+!data/historico.json.example
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build and deployment
+dist/
+build/
+.next/
+.nuxt/
+.cache/

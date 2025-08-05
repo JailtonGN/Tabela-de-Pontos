@@ -29,10 +29,17 @@ class Validators {
         // Validar pontos
         if (pontos === undefined || pontos === null) {
             errors.push('Pontos é obrigatório');
-        } else if (!Number.isInteger(pontos) || pontos <= 0) {
-            errors.push('Pontos deve ser um número inteiro positivo');
-        } else if (pontos > 1000) {
-            errors.push('Pontos não pode ser maior que 1000');
+        } else {
+            // Converter para número se for string
+            const pontosNum = parseInt(pontos);
+            if (isNaN(pontosNum) || pontosNum <= 0) {
+                errors.push('Pontos deve ser um número inteiro positivo');
+            } else if (pontosNum > 1000) {
+                errors.push('Pontos não pode ser maior que 1000');
+            } else {
+                // Normalizar para número
+                req.body.pontos = pontosNum;
+            }
         }
 
         // Validar atividade

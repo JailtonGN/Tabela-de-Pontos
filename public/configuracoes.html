@@ -16,47 +16,114 @@
         }
         
         .config-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.25);
             overflow: hidden;
         }
         
         .config-header {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 30px;
+            padding: 35px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            position: relative;
         }
-        
+
+        .config-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            pointer-events: none;
+        }
+
         .config-header h1 {
             margin: 0;
-            font-size: 2rem;
+            font-size: 2.2rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
         }
-        
-        .btn-voltar {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            padding: 12px 24px;
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 25px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .status-online {
+            background: rgba(40, 167, 69, 0.15);
+            border: 2px solid rgba(40, 167, 69, 0.4);
+            color: #28a745;
+            padding: 12px 20px;
             border-radius: 25px;
-            text-decoration: none;
             font-weight: 600;
-            transition: all 0.3s ease;
+            font-size: 0.95rem;
             display: flex;
             align-items: center;
             gap: 8px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .status-online:hover {
+            background: rgba(40, 167, 69, 0.25);
+            transform: translateY(-1px);
+        }
+
+        .status-offline {
+            background: rgba(220, 53, 69, 0.15);
+            border: 2px solid rgba(220, 53, 69, 0.4);
+            color: #dc3545;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        
+        .btn-voltar {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            color: white;
+            padding: 14px 28px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            backdrop-filter: blur(10px);
         }
         
         .btn-voltar:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
             text-decoration: none;
             color: white;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
         
         .config-body {
@@ -71,19 +138,20 @@
         
         .tab-btn {
             flex: 1;
-            padding: 20px;
+            padding: 22px 24px;
             border: none;
             background: transparent;
             cursor: pointer;
-            font-size: 1.1rem;
+            font-size: 1.15rem;
             font-weight: 600;
             color: #6c757d;
             transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
+            border-bottom: 4px solid transparent;
+            position: relative;
         }
         
         .tab-btn:hover {
-            background: rgba(102, 126, 234, 0.1);
+            background: rgba(102, 126, 234, 0.08);
             color: #667eea;
         }
         
@@ -92,27 +160,65 @@
             color: #667eea;
             border-bottom-color: #667eea;
         }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #667eea;
+        }
         
         .tab-content {
             display: none;
-            padding: 40px;
+            padding: 45px;
         }
         
         .tab-content.active {
             display: block;
         }
+
+        .tab-content h3 {
+            margin-top: 0;
+            margin-bottom: 35px;
+            color: #333;
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f1f3f4;
+            position: relative;
+        }
+
+        .tab-content h3::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 1px;
+        }
         
         .config-footer {
             background: #f8f9fa;
-            padding: 30px;
+            padding: 35px 40px;
             border-top: 1px solid #e1e5e9;
         }
         
         .footer-buttons {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            max-width: 800px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            max-width: 900px;
             margin: 0 auto;
         }
         
@@ -120,21 +226,38 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
-            padding: 12px 20px;
+            gap: 10px;
+            padding: 16px 24px;
             border: none;
-            border-radius: 8px;
+            border-radius: 12px;
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 1rem;
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
-            min-height: 45px;
+            min-height: 55px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .footer-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .footer-button:hover::before {
+            left: 100%;
         }
         
         .footer-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
         }
         
         .btn-primary {
@@ -143,13 +266,13 @@
         }
         
         .btn-warning {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            color: #333;
         }
         
         .btn-danger {
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            color: #333;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white;
         }
         
         .btn-success {
@@ -164,35 +287,43 @@
         
         /* Estilos para lista de filhos */
         .lista-filhos {
-            margin-top: 20px;
+            margin-top: 25px;
         }
         
         .filho-item {
             background: white;
             border: 1px solid #e1e5e9;
-            border-radius: 10px;
-            margin-bottom: 15px;
+            border-radius: 16px;
+            margin-bottom: 18px;
             overflow: hidden;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .filho-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border-color: #667eea;
         }
         
         .filho-info {
             display: flex;
             align-items: center;
-            padding: 15px;
-            gap: 15px;
+            padding: 20px;
+            gap: 18px;
         }
         
         .filho-avatar {
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 28px;
             color: white;
             flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
         
         .filho-dados {
@@ -200,55 +331,122 @@
         }
         
         .filho-nome {
-            font-weight: 600;
-            font-size: 1.1rem;
+            font-weight: 700;
+            font-size: 1.2rem;
             color: #333;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
         
         .filho-pontos {
             color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 3px;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            font-weight: 500;
         }
         
         .filho-cor {
             color: #888;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
         }
         
         .filho-acoes {
             display: flex;
-            gap: 8px;
+            gap: 10px;
         }
         
         .novo-filho-form {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
+            padding: 25px;
+            border-radius: 16px;
+            margin-bottom: 25px;
+            border: 1px solid #e1e5e9;
         }
         
         .novo-filho-form .input-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         .novo-filho-form .input-group:last-child {
             margin-bottom: 0;
+        }
+
+        .novo-filho-form .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 700;
+            color: #333;
+            font-size: 1.05rem;
+        }
+
+        .novo-filho-form .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .novo-filho-form .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .novo-filho-form .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .novo-filho-form .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .novo-filho-form .btn:hover::before {
+            left: 100%;
+        }
+
+        .novo-filho-form .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.3);
         }
         
         .texto-vazio {
             text-align: center;
             color: #666;
             font-style: italic;
-            padding: 40px 20px;
+            padding: 50px 20px;
+            font-size: 1.1rem;
         }
         
         @media (max-width: 768px) {
             .config-header {
                 flex-direction: column;
-                gap: 20px;
+                gap: 25px;
                 text-align: center;
+                padding: 25px 20px;
+            }
+
+            .header-controls {
+                flex-direction: column;
+                gap: 18px;
             }
             
             .config-tabs {
@@ -257,22 +455,590 @@
             
             .footer-buttons {
                 grid-template-columns: 1fr;
-                gap: 12px;
+                gap: 15px;
             }
             
             .footer-button {
-                min-height: 50px;
-                font-size: 1rem;
+                min-height: 60px;
+                font-size: 1.05rem;
             }
             
             .filho-info {
                 flex-direction: column;
                 text-align: center;
-                gap: 10px;
+                gap: 15px;
             }
             
             .filho-acoes {
                 justify-content: center;
+            }
+
+            .input-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .input-row .form-control {
+                min-width: auto;
+            }
+
+            .pontos-input {
+                width: auto;
+            }
+
+            .btn-atividade {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .config-container {
+                margin: 10px;
+                border-radius: 20px;
+            }
+
+            .tab-content {
+                padding: 25px 20px;
+            }
+
+            .config-group {
+                padding: 20px;
+                margin-bottom: 25px;
+            }
+
+            .config-group h4 {
+                font-size: 1.15rem;
+            }
+
+            .novo-filho-form {
+                padding: 20px;
+            }
+
+            .nova-atividade-form {
+                padding: 15px;
+            }
+
+            .input-row {
+                gap: 12px;
+            }
+
+            .input-row .form-control {
+                min-width: auto;
+                padding: 10px 14px;
+            }
+
+            .pontos-input {
+                width: 100px;
+            }
+
+            .footer-button {
+                padding: 14px 20px;
+                font-size: 1rem;
+            }
+        }
+
+        /* Estilos para Dropdowns */
+        .dropdown-container {
+            margin-bottom: 25px;
+        }
+
+        .dropdown-container label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 700;
+            color: #333;
+            font-size: 1.05rem;
+        }
+
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+        }
+
+        .dropdown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dropdown-header:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .dropdown-header.active {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1), 0 4px 15px rgba(102, 126, 234, 0.15);
+        }
+
+        .dropdown-placeholder {
+            color: #6c757d;
+        }
+
+        .dropdown-placeholder.selected {
+            color: #333;
+            font-weight: 500;
+        }
+
+        .dropdown-arrow {
+            color: #6c757d;
+            transition: transform 0.3s ease;
+        }
+
+        .dropdown-header.active .dropdown-arrow {
+            transform: rotate(180deg);
+        }
+
+        .dropdown-content {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .dropdown-content.show {
+            display: block;
+        }
+
+        .dropdown-search {
+            padding: 12px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #e1e5e9;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .dropdown-options {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .dropdown-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid #f8f9fa;
+        }
+
+        .dropdown-option:hover {
+            background-color: #f8f9fa;
+        }
+
+        .dropdown-option.selected {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .option-text {
+            font-weight: 500;
+        }
+
+        .option-points {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .option-points.positive {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .option-points.negative {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .dropdown-option.selected .option-points {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Estilos específicos para a seção de atividades */
+        .config-group {
+            margin-bottom: 35px;
+            padding: 28px;
+            background: #f8f9fa;
+            border-radius: 18px;
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .config-group:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .config-group h4 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .atividades-container {
+            margin-top: 15px;
+        }
+
+        .nova-atividade-form {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e1e5e9;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .input-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .input-row .form-control {
+            flex: 1;
+            min-width: 220px;
+            padding: 12px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .input-row .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            outline: none;
+        }
+
+        .pontos-input {
+            width: 120px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .input-row .btn-atividade {
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .btn-sm {
+            padding: 10px 16px;
+            font-size: 0.95rem;
+        }
+
+        /* Estilos padronizados para botões de atividades */
+        .btn-atividade {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-width: 100px;
+            text-decoration: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-atividade::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-atividade:hover::before {
+            left: 100%;
+        }
+
+        .btn-atividade:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-atividade:active {
+            transform: translateY(0);
+        }
+
+        .btn-atividade-positiva {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .btn-atividade-negativa {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            color: white;
+        }
+
+        .btn-atividade-icon {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .lista-atividades {
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 12px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        
+        .lista-atividades::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .lista-atividades::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .lista-atividades::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 4px;
+        }
+        
+        .lista-atividades::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Modal de Confirmação Moderno */
+        .modal-confirmacao {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .modal-confirmacao.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-confirmacao-content {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.35);
+            max-width: 450px;
+            width: 90%;
+            animation: slideInModal 0.3s ease;
+            overflow: hidden;
+        }
+        
+        .modal-confirmacao-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+        }
+
+        .modal-confirmacao-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+            pointer-events: none;
+        }
+        
+        .modal-confirmacao-header h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .modal-confirmacao-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 26px;
+            cursor: pointer;
+            padding: 0;
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .modal-confirmacao-close:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-confirmacao-body {
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .modal-confirmacao-body p {
+            margin: 0;
+            font-size: 1.15rem;
+            color: #333;
+            line-height: 1.6;
+            font-weight: 500;
+        }
+        
+        .modal-confirmacao-footer {
+            padding: 25px 30px;
+            display: flex;
+            gap: 18px;
+            justify-content: flex-end;
+            background: #f8f9fa;
+            border-top: 1px solid #e1e5e9;
+        }
+        
+        .modal-confirmacao-footer .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .modal-confirmacao-footer .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .modal-confirmacao-footer .btn:hover::before {
+            left: 100%;
+        }
+        
+        .modal-confirmacao-footer .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Animações do modal */
+        @keyframes fadeIn {
+            from { 
+                opacity: 0; 
+                backdrop-filter: blur(0px);
+            }
+            to { 
+                opacity: 1; 
+                backdrop-filter: blur(8px);
+            }
+        }
+        
+        @keyframes slideInModal {
+            from {
+                opacity: 0;
+                transform: scale(0.85) translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        /* Responsividade */
+        @media (max-width: 480px) {
+            .modal-confirmacao-content {
+                width: 95%;
+                margin: 20px;
+                border-radius: 20px;
+            }
+            
+            .modal-confirmacao-header {
+                padding: 20px 25px;
+            }
+            
+            .modal-confirmacao-header h3 {
+                font-size: 1.25rem;
+            }
+            
+            .modal-confirmacao-body {
+                padding: 25px 20px;
+            }
+            
+            .modal-confirmacao-body p {
+                font-size: 1.1rem;
+            }
+            
+            .modal-confirmacao-footer {
+                flex-direction: column;
+                padding: 20px 25px;
+                gap: 12px;
+            }
+            
+            .modal-confirmacao-footer .btn {
+                width: 100%;
+                padding: 16px 24px;
+                font-size: 1.05rem;
             }
         }
     </style>
@@ -282,10 +1048,13 @@
         <div class="config-container">
             <div class="config-header">
                 <h1>⚙️ Configurações do Sistema</h1>
-                <a href="index.html" class="btn-voltar">
-                    <span>←</span>
-                    Voltar ao Sistema
-                </a>
+                <div class="header-controls">
+                    <div id="status-indicator" class="status-online">🌐 Online</div>
+                    <a href="index.html" class="btn-voltar">
+                        <span>←</span>
+                        Voltar ao Sistema
+                    </a>
+                </div>
             </div>
             
             <div class="config-body">
@@ -338,11 +1107,11 @@
                         </div>
                     </div>
                     
-                    <!-- Filhos Cadastrados -->
-                    <div class="config-group">
-                        <h4>👥 Filhos Cadastrados</h4>
-                        <div id="lista-filhos" class="lista-filhos"></div>
-                    </div>
+                                         <!-- Filhos Cadastrados -->
+                     <div class="config-group">
+                         <h4>👥 Filhos Cadastrados</h4>
+                         <div id="lista-filhos" class="lista-filhos"></div>
+                     </div>
                 </div>
 
                 <!-- Aba Atividades -->
@@ -353,13 +1122,16 @@
                     <div class="config-group">
                         <h4>➕ Atividades Positivas</h4>
                         <div class="atividades-container">
-                            <div class="nova-atividade-form">
-                                <div class="input-row">
-                                    <input type="text" id="nova-atividade-positiva" class="form-control" placeholder="Ex: Arrumou o quarto">
-                                    <input type="number" id="pontos-atividade-positiva" class="form-control pontos-input" value="10" min="1" max="100">
-                                    <button onclick="adicionarAtividade('positiva')" class="btn btn-success btn-sm">➕</button>
-                                </div>
-                            </div>
+                                                         <div class="nova-atividade-form">
+                                 <div class="input-row">
+                                     <input type="text" id="nova-atividade-positiva" class="form-control" placeholder="Ex: Arrumou o quarto">
+                                     <input type="number" id="pontos-atividade-positiva" class="form-control pontos-input" value="10" min="1" max="100">
+                                     <button onclick="adicionarAtividade('positiva')" class="btn-atividade btn-atividade-positiva">
+                                         <span class="btn-atividade-icon">➕</span>
+                                         <span>Adicionar</span>
+                                     </button>
+                                 </div>
+                             </div>
                             <div id="lista-atividades-positivas" class="lista-atividades"></div>
                         </div>
                     </div>
@@ -368,17 +1140,60 @@
                     <div class="config-group">
                         <h4>➖ Atividades Negativas</h4>
                         <div class="atividades-container">
-                            <div class="nova-atividade-form">
-                                <div class="input-row">
-                                    <input type="text" id="nova-atividade-negativa" class="form-control" placeholder="Ex: Não arrumou o quarto">
-                                    <input type="number" id="pontos-atividade-negativa" class="form-control pontos-input" value="5" min="1" max="100">
-                                    <button onclick="adicionarAtividade('negativa')" class="btn btn-danger btn-sm">➖</button>
-                                </div>
-                            </div>
+                                                         <div class="nova-atividade-form">
+                                 <div class="input-row">
+                                     <input type="text" id="nova-atividade-negativa" class="form-control" placeholder="Ex: Não arrumou o quarto">
+                                     <input type="number" id="pontos-atividade-negativa" class="form-control pontos-input" value="5" min="1" max="100">
+                                     <button onclick="adicionarAtividade('negativa')" class="btn-atividade btn-atividade-negativa">
+                                         <span class="btn-atividade-icon">➖</span>
+                                         <span>Adicionar</span>
+                                     </button>
+                                 </div>
+                             </div>
                             <div id="lista-atividades-negativas" class="lista-atividades"></div>
                         </div>
                     </div>
 
+                    <!-- Seção de Dropdowns para Teste -->
+                    <div class="config-group">
+                        <h4>🎯 Dropdowns de Atividades (Teste)</h4>
+                        
+                        <!-- Dropdown Adicionar -->
+                        <div class="dropdown-container">
+                            <label>Atividade para Adicionar Pontos:</label>
+                            <div class="custom-dropdown" id="dropdown-adicionar">
+                                <div class="dropdown-header" id="dropdown-header-adicionar">
+                                    <span class="dropdown-placeholder">Selecione uma atividade...</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="dropdown-content" id="dropdown-content-adicionar">
+                                    <div class="dropdown-search">
+                                        <input type="text" id="search-adicionar" placeholder="Buscar atividade..." class="search-input">
+                                    </div>
+                                    <div class="dropdown-options" id="options-adicionar"></div>
+                                </div>
+                                <select id="atividade-adicionar" style="display: none;"></select>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Remover -->
+                        <div class="dropdown-container">
+                            <label>Atividade para Remover Pontos:</label>
+                            <div class="custom-dropdown" id="dropdown-remover">
+                                <div class="dropdown-header" id="dropdown-header-remover">
+                                    <span class="dropdown-placeholder">Selecione uma atividade...</span>
+                                    <span class="dropdown-arrow">▼</span>
+                                </div>
+                                <div class="dropdown-content" id="dropdown-content-remover">
+                                    <div class="dropdown-search">
+                                        <input type="text" id="search-remover" placeholder="Buscar atividade..." class="search-input">
+                                    </div>
+                                    <div class="dropdown-options" id="options-remover"></div>
+                                </div>
+                                <select id="atividade-remover" style="display: none;"></select>
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -386,7 +1201,10 @@
             <div class="config-footer">
                 <div class="footer-buttons">
                     <button id="btn-baixar-log" class="footer-button btn-primary admin-only">
-                        📋 Baixar Log
+                        📋 Log Completo
+                    </button>
+                    <button id="btn-baixar-log-resumido" class="footer-button btn-success admin-only">
+                        📊 Apenas Pontos
                     </button>
                     <button id="btn-resetar-pontos" class="footer-button btn-warning admin-only">
                         🔄 Resetar Pontos
@@ -401,6 +1219,23 @@
 
     <!-- Container de Notificações -->
     <div class="toast-container" id="toast-container"></div>
+    
+    <!-- Modal de Confirmação Moderno -->
+    <div id="modal-confirmacao" class="modal-confirmacao">
+        <div class="modal-confirmacao-content">
+            <div class="modal-confirmacao-header">
+                <h3 id="modal-confirmacao-titulo">⚠️ Confirmação</h3>
+                <button class="modal-confirmacao-close" id="modal-confirmacao-close">&times;</button>
+            </div>
+            <div class="modal-confirmacao-body">
+                <p id="modal-confirmacao-mensagem">Tem certeza que deseja continuar?</p>
+            </div>
+            <div class="modal-confirmacao-footer">
+                <button class="btn btn-secondary" id="modal-confirmacao-cancelar">Cancelar</button>
+                <button class="btn btn-danger" id="modal-confirmacao-confirmar">Confirmar</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Socket.IO Client -->
     <script src="/socket.io/socket.io.js"></script>
@@ -527,8 +1362,88 @@
                 carregarConfiguracoesNoModal();
                 
                 console.log('✅ Dados carregados na página de configurações');
-            }, 100);
-        });
-    </script>
+                         }, 100);
+         });
+         
+         // ✨ NOVO: Sistema de Modal de Confirmação Moderno
+         // Removido: let confirmacaoCallback = null; (já declarado no script.js)
+         
+         // Função para mostrar modal de confirmação
+         function mostrarConfirmacao(titulo, mensagem, callback) {
+             const modal = document.getElementById('modal-confirmacao');
+             const tituloElement = document.getElementById('modal-confirmacao-titulo');
+             const mensagemElement = document.getElementById('modal-confirmacao-mensagem');
+             
+             // Configurar conteúdo
+             tituloElement.textContent = titulo;
+             mensagemElement.textContent = mensagem;
+             
+             // Armazenar callback
+             confirmacaoCallback = callback;
+             
+             // Mostrar modal
+             modal.classList.add('show');
+             
+             // Adicionar event listeners
+             const btnConfirmar = document.getElementById('modal-confirmacao-confirmar');
+             const btnCancelar = document.getElementById('modal-confirmacao-cancelar');
+             const btnClose = document.getElementById('modal-confirmacao-close');
+             
+             // Função para fechar modal
+             const fecharModal = () => {
+                 modal.classList.remove('show');
+                 confirmacaoCallback = null;
+             };
+             
+             // Event listeners
+             btnConfirmar.onclick = () => {
+                 if (confirmacaoCallback) {
+                     confirmacaoCallback(true);
+                 }
+                 fecharModal();
+             };
+             
+             btnCancelar.onclick = () => {
+                 if (confirmacaoCallback) {
+                     confirmacaoCallback(false);
+                 }
+                 fecharModal();
+             };
+             
+             btnClose.onclick = fecharModal;
+             
+             // Fechar ao clicar fora do modal
+             modal.onclick = (e) => {
+                 if (e.target === modal) {
+                     fecharModal();
+                 }
+             };
+             
+             // Fechar com ESC
+             const handleEsc = (e) => {
+                 if (e.key === 'Escape') {
+                     fecharModal();
+                     document.removeEventListener('keydown', handleEsc);
+                 }
+             };
+             document.addEventListener('keydown', handleEsc);
+         }
+         
+         // Função para substituir o confirm() nativo
+         function confirmarAcao(mensagem, callback) {
+             mostrarConfirmacao('⚠️ Confirmação', mensagem, callback);
+         }
+
+         // Configurar eventos dos dropdowns na página de configurações
+         document.addEventListener('DOMContentLoaded', function() {
+             // Configurar eventos dos dropdowns
+             configurarEventosDropdown();
+             
+             // Iniciar verificação de status da conexão
+             iniciarVerificacaoStatus();
+             
+             console.log('🎯 Eventos dos dropdowns configurados na página de configurações');
+         });
+     </script>
 </body>
 </html> 

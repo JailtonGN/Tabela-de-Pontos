@@ -5,14 +5,21 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "start:optimized": "node server-otimizado.js",
     "dev": "nodemon server.js",
+    "dev:optimized": "nodemon server-otimizado.js",
     "build": "echo 'Build completed - Static files ready'",
-    "test": "echo 'No tests specified' && exit 0",
+    "test": "node scripts/test-server.js",
+    "test:server": "node scripts/test-server.js",
     "test:db": "node -e \"console.log('Testing MongoDB connection...')\"",
     "test:data": "node -e \"console.log('Checking data integrity...')\"",
     "deploy": "npm run build",
     "lint": "echo 'Linting JavaScript files...'",
-    "clean": "echo 'Cleaning build artifacts...'"
+    "clean": "echo 'Cleaning build artifacts...'",
+    "setup": "node scripts/setup.js",
+    "security": "npm audit",
+    "security:fix": "npm audit fix",
+    "postinstall": "echo 'Run npm run setup to configure the project'"
   },
   "repository": {
     "type": "git",
@@ -49,13 +56,15 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
+    "axios": "^1.6.0",
     "body-parser": "^1.20.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
     "firebase-admin": "^13.4.0",
-    "jspdf": "^2.5.1",
+    "jspdf": "^3.0.1",
     "mongoose": "^8.17.0",
     "socket.io": "^4.8.1"
   },
