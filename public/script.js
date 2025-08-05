@@ -1035,6 +1035,18 @@ function atualizarIndicadorStatus(online) {
             statusText.className = 'status-text offline';
         }
     }
+    
+    // Atualizar também o status na página de configurações
+    const configStatusIndicator = document.querySelector('#status-indicator.status-online, #status-indicator.status-offline');
+    if (configStatusIndicator) {
+        if (online) {
+            configStatusIndicator.className = 'status-online';
+            configStatusIndicator.textContent = '🟢 Online';
+        } else {
+            configStatusIndicator.className = 'status-offline';
+            configStatusIndicator.textContent = '🔴 Offline';
+        }
+    }
 }
 
 // ✨ NOVA FUNÇÃO: Sincronização inteligente após cada ação
@@ -2674,6 +2686,9 @@ async function carregarAtividades() {
             if (atividadesNegativas.length > 0) {
                 console.log('➖ Atividades negativas:', atividadesNegativas.map(a => `${a.nome} (${a.pontos} pts)`));
             }
+            
+            // ✨ CORREÇÃO: Atualizar dropdowns após carregar atividades
+            atualizarSelectsAtividades();
         } else {
             console.error('❌ Erro ao carregar atividades da nuvem:', response.status, response.statusText);
             mostrarAvisoOffline('Não foi possível carregar as atividades do servidor. Verifique sua conexão com a internet.');
@@ -2908,7 +2923,7 @@ async function verificarStatusConexao() {
         if (response.ok) {
             const statusIndicator = document.getElementById('status-indicator');
             if (statusIndicator) {
-                statusIndicator.innerHTML = '🌐 Online';
+                statusIndicator.innerHTML = '🟢 Online';
                 statusIndicator.className = 'status-online';
             }
             return true;
@@ -2919,7 +2934,7 @@ async function verificarStatusConexao() {
         console.error('❌ Erro de conexão:', error);
         const statusIndicator = document.getElementById('status-indicator');
         if (statusIndicator) {
-            statusIndicator.innerHTML = '🌐 Offline';
+            statusIndicator.innerHTML = '🔴 Offline';
             statusIndicator.className = 'status-offline';
         }
         return false;
@@ -3332,7 +3347,10 @@ function atualizarInterface() {
         carregarSelectCriancas();
     }
     
-    console.log('✅ Interface atualizada (incluindo histórico e lembretes)');
+    // ✨ CORREÇÃO: Atualizar dropdowns de atividades na tela principal
+    atualizarSelectsAtividades();
+    
+    console.log('✅ Interface atualizada (incluindo histórico, lembretes e atividades)');
 }
 
 // Encontrar filho por ID
@@ -5474,9 +5492,10 @@ function atualizarSelectsAtividades() {
     
     // Verificar se estamos na página correta
     const isConfigPage = window.location.pathname.includes('configuracoes.html');
-    console.log('📍 Página atual:', window.location.pathname, 'É página de configurações:', isConfigPage);
+    const isMainPage = window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname === '';
+    console.log('📍 Página atual:', window.location.pathname, 'É página de configurações:', isConfigPage, 'É página principal:', isMainPage);
     
-    // Só atualizar dropdowns se estivermos na página de configurações
+    // Atualizar dropdowns na página de configurações
     if (isConfigPage) {
         // Atualizar dropdown de atividades positivas (adicionar pontos)
         atualizarDropdownAtividades('adicionar', atividadesPositivas, 'positive');
@@ -5484,9 +5503,25 @@ function atualizarSelectsAtividades() {
         // Atualizar dropdown de atividades negativas (remover pontos)
         atualizarDropdownAtividades('remover', atividadesNegativas, 'negative');
         
-        console.log('✅ Atualização de dropdowns concluída');
-    } else {
-        console.log('ℹ️ Não estamos na página de configurações, pulando atualização de dropdowns');
+        console.log('✅ Atualização de dropdowns na página de configurações concluída');
+    }
+    
+    // Atualizar dropdowns na tela principal
+    if (isMainPage) {
+        // Atualizar dropdown de atividades positivas (adicionar pontos)
+        atualizarDropdownAtividades('adicionar', atividadesPositivas, 'positive');
+        
+        // Atualizar dropdown de atividades negativas (remover pontos)
+        atualizarDropdownAtividades('remover', atividadesNegativas, 'negative');
+        
+        console.log('✅ Atualização de dropdowns na tela principal concluída');
+    }
+    
+    // Se não estiver em nenhuma das páginas conhecidas, tentar atualizar mesmo assim
+    if (!isConfigPage && !isMainPage) {
+        console.log('⚠️ Página não reconhecida, tentando atualizar dropdowns mesmo assim...');
+        atualizarDropdownAtividades('adicionar', atividadesPositivas, 'positive');
+        atualizarDropdownAtividades('remover', atividadesNegativas, 'negative');
     }
     
     console.log(`📊 Resumo: ${atividadesPositivas.length} positivas, ${atividadesNegativas.length} negativas`);

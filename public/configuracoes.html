@@ -61,6 +61,7 @@
             z-index: 1;
         }
 
+        /* Status padronizado - igual ao da tela principal */
         .status-online {
             background: rgba(40, 167, 69, 0.15);
             border: 2px solid rgba(40, 167, 69, 0.4);
@@ -74,11 +75,14 @@
             gap: 8px;
             backdrop-filter: blur(10px);
             transition: all 0.3s ease;
+            white-space: nowrap;
+            cursor: help;
         }
 
         .status-online:hover {
             background: rgba(40, 167, 69, 0.25);
             transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
         }
 
         .status-offline {
@@ -94,6 +98,14 @@
             gap: 8px;
             backdrop-filter: blur(10px);
             animation: pulse 2s infinite;
+            white-space: nowrap;
+            cursor: help;
+        }
+
+        .status-offline:hover {
+            background: rgba(220, 53, 69, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
         }
 
         @keyframes pulse {
@@ -1049,7 +1061,7 @@
             <div class="config-header">
                 <h1>⚙️ Configurações do Sistema</h1>
                 <div class="header-controls">
-                    <div id="status-indicator" class="status-online">🌐 Online</div>
+                    <div id="status-indicator" class="status-online">🟢 Online</div>
                     <a href="index.html" class="btn-voltar">
                         <span>←</span>
                         Voltar ao Sistema

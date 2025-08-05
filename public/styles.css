@@ -140,68 +140,158 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* ===== INDICADORES DE STATUS PADRONIZADOS ===== */
+
+/* Status Container - Container principal para todos os indicadores */
+.status-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* Status Indicator - Indicador visual (bolinha) */
 .status-indicator {
-    width: 8px;
-    height: 8px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .status-indicator.online {
-    background-color: #4CAF50;
-    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+    background-color: #28a745;
+    box-shadow: 0 0 8px rgba(40, 167, 69, 0.6);
 }
 
 .status-indicator.offline {
-    background-color: #f44336;
-    box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
+    background-color: #dc3545;
+    box-shadow: 0 0 8px rgba(220, 53, 69, 0.6);
+    animation: pulse 2s infinite;
 }
 
+/* Status Text - Texto do status */
 .status-text {
-    font-size: 12px;
+    font-size: 0.95rem;
     font-weight: 600;
     transition: all 0.3s ease;
+    white-space: nowrap;
 }
 
 .status-text.online {
-    color: #4CAF50;
+    color: #28a745;
 }
 
 .status-text.offline {
-    color: #f44336;
+    color: #dc3545;
 }
 
-/* WebSocket Status integrado ao header */
-.websocket-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-size: 0.8em;
+/* Status Badge - Badge unificado para todos os status */
+.status-badge {
+    background: rgba(40, 167, 69, 0.15);
+    border: 2px solid rgba(40, 167, 69, 0.4);
+    color: #28a745;
+    padding: 12px 20px;
+    border-radius: 25px;
     font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
     transition: all 0.3s ease;
+    white-space: nowrap;
+    cursor: help;
+}
+
+.status-badge:hover {
+    background: rgba(40, 167, 69, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+}
+
+.status-badge.offline {
+    background: rgba(220, 53, 69, 0.15);
+    border: 2px solid rgba(220, 53, 69, 0.4);
+    color: #dc3545;
+    animation: pulse 2s infinite;
+}
+
+.status-badge.offline:hover {
+    background: rgba(220, 53, 69, 0.25);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
+}
+
+.status-badge.connecting {
+    background: rgba(255, 152, 0, 0.15);
+    border: 2px solid rgba(255, 152, 0, 0.4);
+    color: #FF9800;
+    animation: pulse 2s infinite;
+}
+
+.status-badge.connecting:hover {
+    background: rgba(255, 152, 0, 0.25);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+}
+
+/* WebSocket Status - Mantém compatibilidade mas usa o novo padrão */
+.websocket-status {
+    background: rgba(40, 167, 69, 0.15);
+    border: 2px solid rgba(40, 167, 69, 0.4);
+    color: #28a745;
+    padding: 12px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    white-space: nowrap;
     cursor: help;
     margin-right: 10px;
 }
 
+.websocket-status:hover {
+    background: rgba(40, 167, 69, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+}
+
 .websocket-status.connected {
-    background: rgba(76, 175, 80, 0.2);
-    color: #4CAF50;
-    border: 1px solid rgba(76, 175, 80, 0.3);
+    background: rgba(40, 167, 69, 0.15);
+    border: 2px solid rgba(40, 167, 69, 0.4);
+    color: #28a745;
+}
+
+.websocket-status.connected:hover {
+    background: rgba(40, 167, 69, 0.25);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
 }
 
 .websocket-status.connecting {
-    background: rgba(255, 152, 0, 0.2);
+    background: rgba(255, 152, 0, 0.15);
+    border: 2px solid rgba(255, 152, 0, 0.4);
     color: #FF9800;
-    border: 1px solid rgba(255, 152, 0, 0.3);
     animation: pulse 2s infinite;
 }
 
+.websocket-status.connecting:hover {
+    background: rgba(255, 152, 0, 0.25);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.2);
+}
+
 .websocket-status.disconnected {
-    background: rgba(244, 67, 54, 0.2);
-    color: #F44336;
-    border: 1px solid rgba(244, 67, 54, 0.3);
+    background: rgba(220, 53, 69, 0.15);
+    border: 2px solid rgba(220, 53, 69, 0.4);
+    color: #dc3545;
+    animation: pulse 2s infinite;
+}
+
+.websocket-status.disconnected:hover {
+    background: rgba(220, 53, 69, 0.25);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2);
 }
 
 .container {
@@ -954,10 +1044,19 @@ body {
     }
     
     .websocket-status {
-        font-size: 0.7em;
-        padding: 4px 8px;
+        font-size: 0.8rem;
+        padding: 8px 12px;
         margin-right: 0;
         margin-bottom: 5px;
+        border-radius: 20px;
+    }
+    
+    .status-container {
+        margin-bottom: 5px;
+    }
+    
+    .status-text {
+        font-size: 0.85rem;
     }
     
     .header h1 {
