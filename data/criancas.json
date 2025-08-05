@@ -34,13 +34,13 @@
   },
   {
     "id": 4,
-    "nome": "chico",
+    "nome": "Chico",
     "emoji": "👦",
     "cor": {
       "nome": "Azul",
       "valor": "#4facfe",
       "gradiente": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
     },
-    "pontos": 0
+    "pontos": 16
   }
 ]

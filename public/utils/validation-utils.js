@@ -194,7 +194,7 @@ class ValidationUtils {
      */
     static validateForm(formData, rules) {
         const errors = [];
-        const isValid = true;
+        let isValid = true;
 
         for (const [field, rule] of Object.entries(rules)) {
             const value = formData[field];

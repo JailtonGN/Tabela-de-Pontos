@@ -179,7 +179,8 @@ class StateManager {
 
     static atualizarFilho(id, updates) {
         const filhos = this.getFilhos();
-        const index = filhos.findIndex(f => f.id === id);
+        // ✨ CORREÇÃO: Usar == em vez de === para permitir conversão de tipos
+        const index = filhos.findIndex(f => f.id == id);
         if (index !== -1) {
             filhos[index] = { ...filhos[index], ...updates };
             this.set('filhos', filhos);
@@ -187,7 +188,18 @@ class StateManager {
     }
 
     static encontrarFilho(id) {
-        return this.getFilhos().find(f => f.id === id);
+        console.log('🔍 DEBUG StateManager: encontrarFilho() chamada com ID:', id, 'tipo:', typeof id);
+        const filhos = this.getFilhos();
+        console.log('🔍 DEBUG StateManager: Filhos disponíveis:', filhos);
+        
+        // Converter para número se for string
+        const idNum = typeof id === 'string' ? parseInt(id) : id;
+        console.log('🔍 DEBUG StateManager: ID convertido:', idNum);
+        
+        const filho = filhos.find(f => f.id == idNum);
+        console.log('🔍 DEBUG StateManager: Filho encontrado:', filho);
+        
+        return filho;
     }
 
     /**

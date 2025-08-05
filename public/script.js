@@ -1955,36 +1955,7 @@ async function removerFilho(id) {
     }
 }
 
-async function salvarConfiguracoes() {
-    // ✨ NOVO: Bloquear sincronização durante salvamento
-    bloquearSincronizacaoComTimeout();
-    
-    // Salvar dados locais
-    await salvarDados();
-    
-    // Salvar configurações das crianças no servidor
-    try {
-        const response = await ApiService.post('/api/salvar-criancas', { criancas: filhos });
-        if (response.success) {
-            console.log('👨‍👩‍👧‍👦 Configurações das crianças salvas no servidor');
-            // ✨ NOVO: Desbloquear após salvar com sucesso
-            desbloquearSincronizacao();
-        }
-    } catch (error) {
-        console.error('❌ Erro ao salvar configurações das crianças:', error);
-        // ✨ NOVO: Desbloquear mesmo em caso de erro
-        desbloquearSincronizacao();
-    }
-    
-    // Fechar modal
-    fecharModalConfiguracoes();
-    
-    // ✨ NOVO: Sincronizar após salvar configurações
-    await sincronizarAposAcao('salvar configurações');
-    
-    // Mostrar notificação
-    mostrarNotificacao('✅ Configurações salvas com sucesso!', 'success');
-}
+
 
 // Configurar eventos
 function configurarEventos() {
@@ -2001,15 +1972,16 @@ function configurarEventos() {
         
         // Bloquear acesso para visitantes
         if (userType === 'guest') {
-            console.log('🚫 Acesso ao modal de configurações bloqueado para visitantes');
+            console.log('🚫 Acesso à página de configurações bloqueado para visitantes');
             mostrarNotificacao('🚫 Acesso não permitido no modo visitante', 'error');
             return;
         }
         
         try {
-            abrirModalConfiguracoes();
+            // Redirecionar para a página de configurações
+            window.location.href = 'configuracoes.html';
         } catch (error) {
-            console.error('❌ Erro ao abrir modal:', error);
+            console.error('❌ Erro ao redirecionar para configurações:', error);
         }
     }, 'Configurar botão de configurações');
     
@@ -2084,7 +2056,7 @@ function configurarEventos() {
         fecharModalConfiguracoes();
     }, 'Fechar modal - X');
     EventManager.addClickHandler('btn-cancelar-config', fecharModalConfiguracoes, 'Cancelar configurações');
-    EventManager.addClickHandler('btn-salvar-config', salvarConfiguracoes, 'Salvar configurações');
+    
     EventManager.addClickHandler('btn-baixar-log', baixarLog, 'Baixar log');
     EventManager.addClickHandler('btn-resetar-pontos', resetarPontos, 'Resetar pontos');
     EventManager.addClickHandler('btn-limpar-historico', limparHistorico, 'Limpar histórico');
@@ -2776,7 +2748,14 @@ function renderizarSelects() {
     ];
     
     selects.forEach(selectId => {
-        const select = DomUtils.getElementById(selectId);
+        // Tentar diferentes métodos para encontrar o elemento
+        let select = DomUtils.getElementById(selectId);
+        
+        // Se não encontrou com DomUtils, tentar diretamente
+        if (!select) {
+            select = document.getElementById(selectId);
+        }
+        
         console.log(`🔍 Select ${selectId}:`, select);
         
         if (select) {
@@ -2839,7 +2818,17 @@ function atualizarInterface() {
 
 // Encontrar filho por ID
 function encontrarFilho(id) {
-    return filhos.find(filho => filho.id == id);
+    console.log('🔍 DEBUG: encontrarFilho() chamada com ID:', id, 'tipo:', typeof id);
+    console.log('🔍 DEBUG: Filhos disponíveis:', filhos);
+    
+    // Converter para número se for string
+    const idNum = typeof id === 'string' ? parseInt(id) : id;
+    console.log('🔍 DEBUG: ID convertido:', idNum);
+    
+    const filho = filhos.find(filho => filho.id == idNum);
+    console.log('🔍 DEBUG: Filho encontrado:', filho);
+    
+    return filho;
 }
 
 // Gerar ID único para novo filho
@@ -3444,7 +3433,8 @@ function renderizarHistorico(historicoContainer, filtro = 'todos') {
     
     const logsDeHistorico = logs.filter(log => {
         // APENAS logs de pontos com crianças que ainda existem
-        if ((log.acao === 'adicionar_pontos' || log.acao === 'remover_pontos') && 
+        if ((log.acao === 'adicionar_pontos' || log.acao === 'remover_pontos' || 
+             log.acao === 'adicionar_pontos_avulsos' || log.acao === 'remover_pontos_avulsos') && 
             log.detalhes && log.detalhes.filho && log.detalhes.atividade) {
             return nomesCriancasAtivas.includes(log.detalhes.filho.toLowerCase());
         }
@@ -4275,9 +4265,14 @@ async function handleAvulsoAdd() {
     console.log('🔍 DEBUG: handleAvulsoAdd() chamada - iniciando');
     
     // ✨ REFATORADO: Usar ValidationUtils para validações
-    const filhoSelect = DomUtils.getElement('filho-avulso-add');
-    const pontosInput = DomUtils.getElement('pontos-avulso-add');
-    const motivoInput = DomUtils.getElement('motivo-avulso-add');
+    let filhoSelect = DomUtils.getElement('filho-avulso-add');
+    let pontosInput = DomUtils.getElement('pontos-avulso-add');
+    let motivoInput = DomUtils.getElement('motivo-avulso-add');
+    
+    // Fallback se DomUtils não encontrar
+    if (!filhoSelect) filhoSelect = document.getElementById('filho-avulso-add');
+    if (!pontosInput) pontosInput = document.getElementById('pontos-avulso-add');
+    if (!motivoInput) motivoInput = document.getElementById('motivo-avulso-add');
     
     // Validar elementos DOM
     const elementValidation = ValidationUtils.validateForm({
@@ -4300,6 +4295,7 @@ async function handleAvulsoAdd() {
     const motivo = motivoInput.value.trim();
     
     console.log('🔍 DEBUG: Dados coletados:', { filhoId, pontosValor, motivo });
+    console.log('🔍 DEBUG: Lista de filhos disponível:', filhos);
 
     // ✨ REFATORADO: Validação usando ValidationUtils
     const formData = { filhoId, pontos: pontosValor, atividade: motivo };
@@ -4310,8 +4306,12 @@ async function handleAvulsoAdd() {
         return;
     }
 
+    console.log('🔍 DEBUG: Buscando filho com ID:', filhoId);
     const filho = encontrarFilho(filhoId);
-    const filhoValidation = ValidationUtils.validateExists(filhoId, filhos, 'Filho', (id, list) => list.some(f => f.id === id));
+    console.log('🔍 DEBUG: Filho encontrado:', filho);
+    
+    // ✨ CORREÇÃO: Usar == em vez de === para permitir conversão de tipos
+    const filhoValidation = ValidationUtils.validateExists(filhoId, filhos, 'Filho', (id, list) => list.some(f => f.id == id));
     
     if (!filhoValidation.isValid) {
         ValidationUtils.showValidationError(filhoValidation);
@@ -4386,9 +4386,14 @@ async function handleAvulsoAdd() {
 // Função para lidar com pontos avulsos - remover
 async function handleAvulsoRemove() {
     // ✨ REFATORADO: Usar ValidationUtils para validações
-    const filhoSelect = DomUtils.getElement('filho-avulso-remove');
-    const pontosInput = DomUtils.getElement('pontos-avulso-remove');
-    const motivoInput = DomUtils.getElement('motivo-avulso-remove');
+    let filhoSelect = DomUtils.getElement('filho-avulso-remove');
+    let pontosInput = DomUtils.getElement('pontos-avulso-remove');
+    let motivoInput = DomUtils.getElement('motivo-avulso-remove');
+    
+    // Fallback se DomUtils não encontrar
+    if (!filhoSelect) filhoSelect = document.getElementById('filho-avulso-remove');
+    if (!pontosInput) pontosInput = document.getElementById('pontos-avulso-remove');
+    if (!motivoInput) motivoInput = document.getElementById('motivo-avulso-remove');
     
     // Validar elementos DOM
     const elementValidation = ValidationUtils.validateForm({
@@ -4420,7 +4425,9 @@ async function handleAvulsoRemove() {
     }
 
     const filho = encontrarFilho(filhoId);
-    const filhoValidation = ValidationUtils.validateExists(filhoId, filhos, 'Filho', (id, list) => list.some(f => f.id === id));
+    
+    // ✨ CORREÇÃO: Usar == em vez de === para permitir conversão de tipos
+    const filhoValidation = ValidationUtils.validateExists(filhoId, filhos, 'Filho', (id, list) => list.some(f => f.id == id));
     
     if (!filhoValidation.isValid) {
         ValidationUtils.showValidationError(filhoValidation);
